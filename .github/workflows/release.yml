@@ -1,0 +1,54 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*.*.*"
+
+# Ensure builds run sequentially per branch, cancel running PR/branch builds.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # To reduce the attack surface, don't expose the token to subsequent
+          # steps implicitly, particularly not to custom, 3rd party build logic.
+          # See https://github.com/actions/checkout/issues/485
+          persist-credentials: false
+          fetch-depth: 0
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pip
+            ~/.platformio/.cache
+          key: ${{ runner.os }}-pio
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install PlatformIO Core
+        run: pip install --upgrade platformio
+
+      - name: Install PlatformIO libraries
+        run: pio pkg install
+
+      - id: release
+        name: Create release
+        uses: mgoltzsche/conventional-release@v0
+        with:
+          github-release-files: .pio/build/release/firmware.bin
+          #ignore-commits-before: 2eb3ca4f
+
+      - name: Build PlatformIO
+        run: platformio run -e release
