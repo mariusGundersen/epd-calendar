@@ -253,6 +253,102 @@ void Epd::DisplayRed()
     TurnOnDisplay();
 }
 
+bool getBlackBit(const unsigned char nibble, const unsigned long col, const unsigned long row)
+{
+    switch (nibble)
+    {
+    case INK_BLACK:
+        return 0;
+    case INK_WHITE:
+        return 1;
+    case INK_GREY:
+    case INK_DARK_RED:
+        return (col + row) % 2 == 0 ? 1 : 0;
+    case INK_LIGHT_GREY:
+        return (col & row) % 2 == 0 ? 1 : 0;
+    case INK_DARK_GREY:
+        return (col & row) % 2 == 0 ? 0 : 1;
+    default:
+        return 1;
+    }
+}
+
+char getBlackbits(const unsigned char *image, const unsigned long ptr, const unsigned long row)
+{
+    unsigned char temp = 0;
+    for (int k = 0; k < 4; k++)
+    {
+        const unsigned long index = ptr / 2 + k;
+        char upper = getBlackBit((image[index] & 0xF0) >> 4, k * 2 + 0, row);
+        char lower = getBlackBit((image[index] & 0x0F) >> 0, k * 2 + 1, row);
+
+        char pair = (upper << 7) | (lower << 6);
+
+        temp |= pair >> (k * 2);
+    }
+    return temp;
+}
+
+bool getRedBit(const unsigned char nibble, const unsigned long col, const unsigned long row)
+{
+    switch (nibble)
+    {
+    case INK_RED:
+        return 1;
+    case INK_WHITE:
+        return 0;
+    case INK_PINK:
+    case INK_DARK_RED:
+        return (col + row) % 2 == 0 ? 1 : 0;
+    case INK_LIGHT_PINK:
+        return (col & row) % 2 == 0 ? 0 : 1;
+    default:
+        return 0;
+    }
+}
+
+char getRedbits(const unsigned char *image, const unsigned long ptr, const unsigned long row)
+{
+    char temp = 0;
+    for (int k = 0; k < 4; k++)
+    {
+        long index = ptr / 2 + k;
+        char upper = getRedBit((image[index] & 0xF0) >> 4, k * 2 + 0, row);
+        char lower = getRedBit((image[index] & 0x0F) >> 0, k * 2 + 1, row);
+
+        char pair = (upper << 7) | (lower << 6);
+
+        temp |= pair >> (k * 2);
+    }
+    return temp;
+}
+
+void Epd::DisplayImage(const unsigned char *image)
+{
+
+    SendCommand(0x24);
+    for (unsigned long j = 0; j < height; j++)
+    {
+        for (unsigned long i = 0; i < width / 8; i++)
+        {
+            char temp = getBlackbits(image, i * 8 + j * width, j);
+            SendData(temp);
+        }
+    }
+
+    SendCommand(0x26);
+    for (unsigned long j = 0; j < height; j++)
+    {
+        for (unsigned long i = 0; i < width / 8; i++)
+        {
+            char temp = getRedbits(image, i * 8 + j * width, j);
+            SendData(temp);
+        }
+    }
+
+    TurnOnDisplay();
+}
+
 void Epd::DisplayFrame(const unsigned char *blackimage, const unsigned char *ryimage)
 {
 

@@ -44,28 +44,57 @@ void setup()
     TFT_eSPI tft = TFT_eSPI();
     TFT_eSprite frame = TFT_eSprite(&tft);
 
-    frame.setColorDepth(1);
+    frame.setColorDepth(4);
 
-    frame.createSprite(960, 680, 2);
+    frame.createSprite(EPD_WIDTH, EPD_HEIGHT);
 
     frame.setRotation(1);
-    frame.setTextSize(1);        // No size multiplier
-    frame.fillSprite(TFT_WHITE); // Fill the screen with back colour
-    frame.frameBuffer(1);
-    frame.setTextColor(TFT_BLACK, TFT_WHITE); // Set text color to green and padding to back
+    frame.setTextSize(1);                     // No size multiplier
+    frame.fillSprite(INK_WHITE);              // Fill the screen with back colour
+    frame.setTextColor(INK_BLACK, INK_WHITE); // Set text color to green and padding to back
 
     frame.drawString(" !\"#$%&'()*+,-./0123456", 0, 0, 2); // draw top left
     frame.drawString("789:;<=>?@ABCDEFGHIJKL", 0, 16, 2);
     frame.drawString("MNOPQRSTUVWXYZ[\\]^_`", 0, 32, 2);
     frame.drawString("abcdefghijklmnopqrstuvw", 0, 48, 2);
 
-    frame.frameBuffer(1);
-    frame.drawRoundRect(245, 95, 250, 108, 5, TFT_BLACK);
+    frame.drawRoundRect(245, 95, 250, 108, 5, INK_BLACK);
 
-    frame.frameBuffer(2);
-    frame.drawRoundRect(245, 295, 250, 108, 5, TFT_BLACK);
+    frame.drawRoundRect(245, 295, 250, 108, 5, INK_RED);
 
-    epd.DisplayFrame((uint8_t *)frame.frameBuffer(1), (uint8_t *)frame.frameBuffer(2));
+    frame.setCursor(10, 200);
+    frame.setTextFont(1);
+    frame.println("This is font 1");
+    frame.setTextFont(2);
+    frame.println("This is font 2");
+    frame.setTextFont(4);
+    frame.println("This is font 4");
+    frame.setTextFont(6);
+    frame.println("16:37.00");
+    frame.setTextFont(7);
+    frame.println("16:37.00");
+    frame.setTextFont(8);
+    frame.println("16:37.00");
+
+    frame.fillRect(400, 100, 100, 100, INK_RED);
+    frame.fillRect(400, 250, 100, 100, INK_DARK_RED);
+    frame.fillRect(400, 400, 100, 100, INK_BLACK);
+    frame.fillRect(550, 400, 100, 100, INK_DARK_GREY);
+    frame.fillRect(700, 400, 100, 100, INK_GREY);
+    frame.fillRect(850, 400, 100, 100, INK_LIGHT_GREY);
+
+    frame.fillRect(550, 100, 100, 100, INK_PINK);
+    frame.fillRect(700, 100, 100, 100, INK_LIGHT_PINK);
+
+    for (char x = 0; x < 4; x++)
+    {
+        for (char y = 0; y < 4; y++)
+        {
+            frame.fillRect(8 + x * 16, 400 + y * 16, 16, 16, (x << 2) | y);
+        }
+    }
+
+    epd.DisplayImage((uint8_t *)frame.frameBuffer(1));
 
     // epd.Displaypart(IMAGE_DATA, 250, 100, 240, 103, 0);
     // epd.Display_Part(IMAGE_DATA, 250, 300, 240, 103);

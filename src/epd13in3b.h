@@ -33,6 +33,19 @@
 #define EPD_WIDTH 960
 #define EPD_HEIGHT 680
 
+#define INK_WHITE 0b1111
+#define INK_BLACK 0b0000
+
+#define INK_LIGHT_GREY 0b0011
+#define INK_GREY 0b0010
+#define INK_DARK_GREY 0b0001
+
+#define INK_LIGHT_PINK 0b0111
+#define INK_PINK 0b1011
+#define INK_RED 0b1110
+
+#define INK_DARK_RED 0b0100
+
 class Epd : EpdIf
 {
 public:
@@ -49,6 +62,7 @@ public:
     void Clear(void);
     void Displaypart(const unsigned char *pbuffer, unsigned long xStart, unsigned long yStart, unsigned long Picture_Width, unsigned long Picture_Height, unsigned char Block);
     void DisplayFrame(const unsigned char *blackimage, const unsigned char *ryimage);
+    void DisplayImage(const unsigned char *image);
     void DisplayRed();
     void Display_Base(const unsigned char *blackimage, const unsigned char *ryimage);
     void Display_Part(const unsigned char *Image, unsigned long x, unsigned long y, unsigned long w, unsigned long l);
