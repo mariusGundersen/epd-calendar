@@ -27,6 +27,7 @@
 #include <SPI.h>
 #include "epd13in3b.h"
 #include "imagedata.h"
+#include <TFT_eSPI.h>
 
 void setup()
 {
@@ -38,9 +39,36 @@ void setup()
         Serial.print("e-Paper init failed");
         return;
     }
-    // epd.Clear();
-    epd.Displaypart(IMAGE_DATA, 250, 100, 240, 103, 0);
-    epd.Displaypart(IMAGE_DATA, 250, 300, 240, 103, 1);
+    epd.Clear();
+
+    TFT_eSPI tft = TFT_eSPI();
+    TFT_eSprite frame = TFT_eSprite(&tft);
+
+    frame.setColorDepth(1);
+
+    frame.createSprite(960, 680, 2);
+
+    frame.setRotation(1);
+    frame.setTextSize(1);        // No size multiplier
+    frame.fillSprite(TFT_WHITE); // Fill the screen with back colour
+    frame.frameBuffer(1);
+    frame.setTextColor(TFT_BLACK, TFT_WHITE); // Set text color to green and padding to back
+
+    frame.drawString(" !\"#$%&'()*+,-./0123456", 0, 0, 2); // draw top left
+    frame.drawString("789:;<=>?@ABCDEFGHIJKL", 0, 16, 2);
+    frame.drawString("MNOPQRSTUVWXYZ[\\]^_`", 0, 32, 2);
+    frame.drawString("abcdefghijklmnopqrstuvw", 0, 48, 2);
+
+    frame.frameBuffer(1);
+    frame.drawRoundRect(245, 95, 250, 108, 5, TFT_BLACK);
+
+    frame.frameBuffer(2);
+    frame.drawRoundRect(245, 295, 250, 108, 5, TFT_BLACK);
+
+    epd.DisplayFrame((uint8_t *)frame.frameBuffer(1), (uint8_t *)frame.frameBuffer(2));
+
+    // epd.Displaypart(IMAGE_DATA, 250, 100, 240, 103, 0);
+    // epd.Display_Part(IMAGE_DATA, 250, 300, 240, 103);
 
     epd.Sleep();
 }

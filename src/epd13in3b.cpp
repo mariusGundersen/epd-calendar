@@ -229,6 +229,30 @@ void Epd::Displaypart(const unsigned char *pbuffer, unsigned long xStart, unsign
     }
 }
 
+void Epd::DisplayRed()
+{
+
+    SendCommand(0x24);
+    for (unsigned long j = 0; j < height; j++)
+    {
+        for (unsigned long i = 0; i < width / 8; i++)
+        {
+            SendData(0);
+        }
+    }
+
+    SendCommand(0x26);
+    for (unsigned long j = 0; j < height; j++)
+    {
+        for (unsigned long i = 0; i < width / 8; i++)
+        {
+            SendData(0xff);
+        }
+    }
+
+    TurnOnDisplay();
+}
+
 void Epd::DisplayFrame(const unsigned char *blackimage, const unsigned char *ryimage)
 {
 
@@ -286,7 +310,7 @@ void Epd::Display_Base(const unsigned char *blackimage, const unsigned char *ryi
     }
 }
 
-void Epd::Display_Part(unsigned char *Image, unsigned long x, unsigned long y, unsigned long w, unsigned long l)
+void Epd::Display_Part(const unsigned char *Image, unsigned long x, unsigned long y, unsigned long w, unsigned long l)
 {
     unsigned long i;
     unsigned long HEIGHT = l;
