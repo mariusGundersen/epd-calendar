@@ -1,38 +1,98 @@
-/**
- *  @filename   :   epd7in5b_V2-demo.ino
- *  @brief      :   7.5inch b V2 e-paper display demo
- *  @author     :   Yehui from Waveshare
- *
- *  Copyright (C) Waveshare      Nov 30 2020
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documnetation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to  whom the Software is
- * furished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS OR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- */
-
 #include <SPI.h>
 #include "epd13in3b.h"
 #include "imagedata.h"
+#include <WiFiManager.h>
 #include <TFT_eSPI.h>
+#include <Preferences.h>
+
+Preferences prefs;
+
+void connectToWifi(esp_sleep_wakeup_cause_t wakeup_reason, bool reset = false)
+{
+    WiFi.mode(WIFI_STA);
+    WiFiManager wm;
+    WiFiManagerParameter ical_url("ical_url", "iCal URL", prefs.getString("ical_url").c_str(), 256);
+    wm.addParameter(&ical_url);
+
+    if (reset)
+    {
+        wm.resetSettings();
+    }
+
+    if (wakeup_reason == ESP_SLEEP_WAKEUP_TIMER)
+    {
+        // try to connect, if fails, show message screen and go back to sleep
+        wm.setConnectTimeout(0);
+        wm.setEnableConfigPortal(false);
+    }
+    else
+    {
+        // try to connect, if fails, show config portal for 2 minutes, then show message screen and go back to sleep
+        wm.setConfigPortalTimeout(120);
+        wm.setEnableConfigPortal(true);
+        wm.setCaptivePortalEnable(true);
+
+        wm.setSaveConfigCallback([&]()
+                                 { prefs.putString("ical_url", ical_url.getValue()); });
+    }
+
+    if (wm.autoConnect("calendar", "password"))
+    {
+        // counter = 0;
+    }
+    else
+    {
+        /*counter++;
+        if (counter > 5 || wakeup_reason != ESP_SLEEP_WAKEUP_TIMER)
+        {
+            gfx->fillScreen(RGB_WHITE);
+            gfx->setFont(&FreeSans24pt7b);
+            gfx->setTextColor(RGB_BLACK);
+            gfx->printCentredText("Press Reset button");
+            gfx->updateDisplay();
+
+            // make sure it refreshes the screen when it reconnects
+            prefs.remove("ETag");
+            enterDeepSleep(SleepDuration::untilTomorrow);
+        }
+        else
+        {
+            // now sleep for 1 hour then retry
+            enterDeepSleep(SleepDuration::untilNextHour);
+        }*/
+    }
+}
+
+void setClock()
+{
+    // TODO: replace with ezTime
+    configTime(0, 0, "pool.ntp.org");
+    setenv("TZ", "CET-1CEST-2,M3.5.0/02:00:00,M10.5.0/03:00:00", 1);
+    tzset();
+
+    log_d("Waiting for NTP time sync: ");
+    time_t nowSecs = time(nullptr);
+    while (nowSecs < 10)
+    {
+        delay(500);
+        yield();
+        nowSecs = time(nullptr);
+    }
+
+    struct tm timeinfo;
+    gmtime_r(&nowSecs, &timeinfo);
+    log_d("Current time: %s", asctime(&timeinfo));
+}
 
 void setup()
 {
-    // put your setup code here, to run once:
+    esp_sleep_wakeup_cause_t wakeup_reason = esp_sleep_get_wakeup_cause();
     Serial.begin(115200);
+
+    prefs.begin("calendar");
+    connectToWifi(wakeup_reason);
+    setClock();
+
     Epd epd;
     if (epd.Init() != 0)
     {
