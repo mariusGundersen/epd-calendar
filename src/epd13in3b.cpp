@@ -273,22 +273,6 @@ bool getBlackBit(const unsigned char nibble, const unsigned long col, const unsi
     }
 }
 
-char getBlackbits(const unsigned char *image, const unsigned long ptr, const unsigned long row)
-{
-    unsigned char temp = 0;
-    for (int k = 0; k < 4; k++)
-    {
-        const unsigned long index = ptr / 2 + k;
-        char upper = getBlackBit((image[index] & 0xF0) >> 4, k * 2 + 0, row);
-        char lower = getBlackBit((image[index] & 0x0F) >> 0, k * 2 + 1, row);
-
-        char pair = (upper << 7) | (lower << 6);
-
-        temp |= pair >> (k * 2);
-    }
-    return temp;
-}
-
 bool getRedBit(const unsigned char nibble, const unsigned long col, const unsigned long row)
 {
     switch (nibble)
@@ -307,41 +291,45 @@ bool getRedBit(const unsigned char nibble, const unsigned long col, const unsign
     }
 }
 
-char getRedbits(const unsigned char *image, const unsigned long ptr, const unsigned long row)
+void Epd::DisplayImage(const unsigned char *image, uint8_t rotation)
 {
-    char temp = 0;
-    for (int k = 0; k < 4; k++)
-    {
-        long index = ptr / 2 + k;
-        char upper = getRedBit((image[index] & 0xF0) >> 4, k * 2 + 0, row);
-        char lower = getRedBit((image[index] & 0x0F) >> 0, k * 2 + 1, row);
+    unsigned long h = rotation == 90 || rotation == 270 ? width : height;
+    unsigned long w = rotation == 90 || rotation == 270 ? height : width;
+    unsigned long f = rotation == 180 ? 1 : 0;
 
-        char pair = (upper << 7) | (lower << 6);
-
-        temp |= pair >> (k * 2);
-    }
-    return temp;
-}
-
-void Epd::DisplayImage(const unsigned char *image)
-{
     SendCommand(0x24);
-    for (unsigned long j = 0; j < height; j++)
+    for (unsigned long j = 0; j < h; j++)
     {
-        for (unsigned long i = 0; i < width / 8; i++)
+        unsigned long y = f * (h - 1) - j;
+        char temp = 0;
+        for (unsigned long i = 0; i < w; i++)
         {
-            char temp = getBlackbits(image, i * 8 + j * width, j);
-            SendData(temp);
+            unsigned long x = f * (w - 1) - i;
+            char nibble = x & 0x1 ? (image[(x + y * w) >> 1] & 0x0F) : (image[(x + y * w) >> 1] & 0xF0) >> 4;
+            temp |= getBlackBit(nibble, x, y) << (f ? (x & 0x7) : 7 - (x & 0x7));
+            if ((i & 0x7) == 0x7)
+            {
+                SendData(temp);
+                temp = 0;
+            }
         }
     }
 
     SendCommand(0x26);
-    for (unsigned long j = 0; j < height; j++)
+    for (unsigned long j = 0; j < h; j++)
     {
-        for (unsigned long i = 0; i < width / 8; i++)
+        unsigned long y = f * (h - 1) - j;
+        char temp = 0;
+        for (unsigned long i = 0; i < w; i++)
         {
-            char temp = getRedbits(image, i * 8 + j * width, j);
-            SendData(temp);
+            unsigned long x = f * (w - 1) - i;
+            char nibble = x & 0x1 ? (image[(x + y * w) >> 1] & 0x0F) : (image[(x + y * w) >> 1] & 0xF0) >> 4;
+            temp |= getRedBit(nibble, x, y) << (f ? (x & 0x7) : 7 - (x & 0x7));
+            if ((i & 0x7) == 0x7)
+            {
+                SendData(temp);
+                temp = 0;
+            }
         }
     }
 

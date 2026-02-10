@@ -234,7 +234,7 @@ void setup()
     frame.fillSprite(INK_WHITE);              // Fill the screen with back colour
     frame.setTextColor(INK_BLACK, INK_WHITE); // Set text color to green and padding to back
 
-    frame.setTextFont(8);
+    frame.setTextFont(7);
     frame.println(&timeinfo, "%Y-%m-%d %H:%M");
 
     frame.setFreeFont(&FreeSansNordic9pt7b);
@@ -257,7 +257,7 @@ void setup()
 
     frame.readPixelValue(0, 0);
 
-    epd.DisplayImage((uint8_t *)frame.frameBuffer(1));
+    epd.DisplayImage((uint8_t *)frame.frameBuffer(1), 180);
 
     // epd.Displaypart(IMAGE_DATA, 250, 100, 240, 103, 0);
     // epd.Display_Part(IMAGE_DATA, 250, 300, 240, 103);

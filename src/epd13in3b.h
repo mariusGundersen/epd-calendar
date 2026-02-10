@@ -62,7 +62,7 @@ public:
     void Clear(void);
     void Displaypart(const unsigned char *pbuffer, unsigned long xStart, unsigned long yStart, unsigned long Picture_Width, unsigned long Picture_Height, unsigned char Block);
     void DisplayFrame(const unsigned char *blackimage, const unsigned char *ryimage);
-    void DisplayImage(const unsigned char *image);
+    void DisplayImage(const unsigned char *image, uint8_t rotation);
     void DisplayRed();
     void Display_Base(const unsigned char *blackimage, const unsigned char *ryimage);
     void Display_Part(const unsigned char *Image, unsigned long x, unsigned long y, unsigned long w, unsigned long l);
