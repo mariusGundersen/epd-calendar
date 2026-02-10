@@ -325,7 +325,6 @@ char getRedbits(const unsigned char *image, const unsigned long ptr, const unsig
 
 void Epd::DisplayImage(const unsigned char *image)
 {
-
     SendCommand(0x24);
     for (unsigned long j = 0; j < height; j++)
     {
