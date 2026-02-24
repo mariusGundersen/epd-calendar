@@ -10,6 +10,15 @@
 #include <FreeSansNordic9pt7b.h>
 #include <Timezone.h>
 
+#define uS_TO_S_FACTOR 1000000ULL /* Conversion factor for micro seconds to seconds */
+
+enum struct SleepDuration
+{
+    untilTomorrow,
+    untilNextHour,
+    fiveMinutes
+};
+
 Preferences prefs;
 
 const char *googleRootCACert = "-----BEGIN CERTIFICATE-----\n"
@@ -204,6 +213,42 @@ void getCalendarEvents(std::vector<CalendarEvent> &events, String notBefore, Str
     }
 }
 
+void enterDeepSleep(SleepDuration sleepDuration)
+{
+    time_t nowSecs = time(nullptr);
+    struct tm timeinfo;
+    gmtime_r(&nowSecs, &timeinfo);
+
+    int hoursToSleep = sleepDuration == SleepDuration::untilTomorrow ? 3 - timeinfo.tm_hour : 0;
+    if (sleepDuration == SleepDuration::untilTomorrow && hoursToSleep < 1)
+    {
+        hoursToSleep += 24;
+    }
+
+    int minutesToSleep = sleepDuration == SleepDuration::fiveMinutes ? 5 : 59 - timeinfo.tm_min;
+    if (minutesToSleep < 5)
+    {
+        minutesToSleep += 60;
+    }
+
+    int secondsToSleep = 60 - timeinfo.tm_sec;
+    int sleepTime = (hoursToSleep * 60 + minutesToSleep) * 60 + secondsToSleep;
+
+    esp_sleep_enable_timer_wakeup(sleepTime * uS_TO_S_FACTOR);
+    log_d("Setup ESP32 to sleep for %d Seconds\n", sleepTime);
+
+    // This didn't work, need pull-up resistor
+    // pinMode(GPIO_NUM_0, INPUT_PULLUP);
+    // esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_ON);
+    // esp_sleep_enable_ext1_wakeup(1 << GPIO_NUM_0, ESP_EXT1_WAKEUP_ANY_LOW);
+
+    log_d("Going to sleep now\n");
+    // if (Serial)
+    // Serial.flush();
+
+    esp_deep_sleep_start();
+}
+
 void toLocalTime(const String &time, tm *timeinfo, Timezone *tz)
 {
     timeinfo->tm_year = time.substring(0, 4).toInt() - 1900;
@@ -239,7 +284,7 @@ void setup()
 
     char today[9], tomorrow[9];
     strftime(today, sizeof(today), "%Y%m%d", &timeinfo);
-    timeinfo.tm_mday += 3;
+    timeinfo.tm_mday += 4;
     mktime(&timeinfo);
     strftime(tomorrow, sizeof(tomorrow), "%Y%m%d", &timeinfo);
     Serial.println(today);
@@ -267,26 +312,46 @@ void setup()
     frame.fillSprite(INK_WHITE);              // Fill the screen with back colour
     frame.setTextColor(INK_BLACK, INK_WHITE); // Set text color to green and padding to back
 
-    frame.setTextFont(2);
-    frame.println(&timeinfo, "%A %Y-%m-%d %H:%M");
-
+    frame.setFreeFont(&FreeSerifBoldItalic24pt7b);
+    frame.setTextSize(1);
+    frame.println();
+    frame.println(&timeinfo, "%A %d. %B %Y %H:%M");
     frame.setFreeFont(&FreeSansNordic9pt7b);
-    frame.println();
-    frame.println();
-    for (const auto &event : events)
+    int y = frame.getCursorY();
+    frame.drawWideLine(10, y, EPD_WIDTH - 10, y, 6, INK_RED);
+    const int padding = 4;
+    for (int day = 0; day < 4; day++)
     {
-        tm start;
-        toLocalTime(event.start, &start, &europeOslo);
-        tm end;
-        toLocalTime(event.end, &end, &europeOslo);
-
-        frame.setTextSize(1);
-        frame.print(&start, "%H:%M");
-        frame.print(" - ");
-        frame.println(&end, "%H:%M");
-        frame.setTextSize(1);
-        frame.println(event.summary);
+        frame.setViewport(day * EPD_WIDTH / 4 + padding, y, EPD_WIDTH / 4 - padding * 2, EPD_HEIGHT - y);
+        frame.setFreeFont(&FreeSansBold12pt7b);
+        frame.setCursor(0, 0);
         frame.println();
+        frame.setTextWrap(true);
+        frame.println(&timeinfo, "%A");
+        for (const auto &event : events)
+        {
+            tm start;
+            toLocalTime(event.start, &start, &europeOslo);
+            tm end;
+            toLocalTime(event.end, &end, &europeOslo);
+
+            if (start.tm_mday != timeinfo.tm_mday)
+            {
+                continue;
+            }
+
+            frame.setFreeFont(&FreeSansBold9pt7b);
+            frame.print(&start, "%H:%M");
+            frame.print(" - ");
+            frame.println(&end, "%H:%M");
+            frame.setFreeFont(&FreeSansNordic9pt7b);
+            frame.println(event.summary);
+            frame.println();
+        }
+
+        frame.println();
+        timeinfo.tm_mday += 1;
+        mktime(&timeinfo);
     }
 
     // make sure we are ready again
@@ -295,6 +360,8 @@ void setup()
     epd.DisplayImage((uint8_t *)frame.frameBuffer(1), 180);
 
     epd.Sleep();
+
+    enterDeepSleep(SleepDuration::untilTomorrow);
 }
 
 void loop()
