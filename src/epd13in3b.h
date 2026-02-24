@@ -57,7 +57,7 @@ public:
     int Init(void);
     void ReadBusy(void);
     void Reset(void);
-    void TurnOnDisplay(void);
+    void TurnOnDisplay(bool skipBusy = false);
     void TurnOnDisplay_Part(void);
     void Clear(void);
     void Displaypart(const unsigned char *pbuffer, unsigned long xStart, unsigned long yStart, unsigned long Picture_Width, unsigned long Picture_Height, unsigned char Block);

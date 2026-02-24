@@ -135,12 +135,15 @@ void Epd::ReadBusy(void)
 /**
  *  @brief: Refresh function
  */
-void Epd::TurnOnDisplay(void)
+void Epd::TurnOnDisplay(bool skipBusy)
 {
     SendCommand(0x22);
     SendData(0xF7);
     SendCommand(0x20);
-    ReadBusy();
+    if (!skipBusy)
+    {
+        ReadBusy();
+    }
 }
 
 void Epd::TurnOnDisplay_Part(void)
@@ -180,7 +183,7 @@ void Epd::Clear(void)
     {
         SendData(0x00);
     }
-    TurnOnDisplay();
+    TurnOnDisplay(true);
 }
 
 void Epd::Displaypart(const unsigned char *pbuffer, unsigned long xStart, unsigned long yStart, unsigned long Picture_Width, unsigned long Picture_Height, unsigned char Block)

@@ -8,6 +8,7 @@
 #include <NetworkClientSecure.h>
 #include <Preferences.h>
 #include <FreeSansNordic9pt7b.h>
+#include <Timezone.h>
 
 Preferences prefs;
 
@@ -103,8 +104,7 @@ void setClock(tm *timeinfo)
 {
     // TODO: replace with ezTime
     configTime(0, 0, "pool.ntp.org");
-    setenv("TZ", "CET-1CEST-2,M3.5.0/02:00:00,M10.5.0/03:00:00", 1);
-    tzset();
+    configTzTime("CET-1CEST,M3.5.0,M10.5.0/3", "pool.ntp.org");
 
     log_d("Waiting for NTP time sync: ");
     time_t nowSecs = time(nullptr);
@@ -126,7 +126,7 @@ struct CalendarEvent
     String summary;
 };
 
-void getCalendarEvents(std::vector<CalendarEvent> &events, String today)
+void getCalendarEvents(std::vector<CalendarEvent> &events, String notBefore, String notAfter)
 {
     NetworkClientSecure client;
 
@@ -164,13 +164,21 @@ void getCalendarEvents(std::vector<CalendarEvent> &events, String today)
             {
                 temp.start = line.substring(19);
             }
+            else if (line.startsWith("DTEND:"))
+            {
+                temp.end = line.substring(6);
+            }
+            else if (line.startsWith("DTEND;VALUE=DATE:"))
+            {
+                temp.end = line.substring(17);
+            }
             else if (line.startsWith("SUMMARY:"))
             {
                 temp.summary = line.substring(8);
             }
             else if (line == "END:VEVENT")
             {
-                if (temp.start >= today)
+                if (temp.start < notAfter && temp.end > notBefore)
                 {
                     events.push_back(temp);
                 }
@@ -180,11 +188,12 @@ void getCalendarEvents(std::vector<CalendarEvent> &events, String today)
         std::sort(events.begin(), events.end(), [](const CalendarEvent &a, const CalendarEvent &b)
                   { return a.start < b.start; });
 
+        Serial.println("Between " + notBefore + " and " + notAfter);
         Serial.println("Found " + String(events.size()) + " events");
         // print all events
         for (const auto &event : events)
         {
-            Serial.println("Event: " + event.start + " - " + event.summary);
+            Serial.println("Event: " + event.start + " - " + event.summary + " - " + event.end);
         }
     }
     else
@@ -195,23 +204,24 @@ void getCalendarEvents(std::vector<CalendarEvent> &events, String today)
     }
 }
 
+void toLocalTime(const String &time, tm *timeinfo, Timezone *tz)
+{
+    timeinfo->tm_year = time.substring(0, 4).toInt() - 1900;
+    timeinfo->tm_mon = time.substring(4, 6).toInt() - 1;
+    timeinfo->tm_mday = time.substring(6, 8).toInt();
+    timeinfo->tm_hour = time.substring(9, 11).toInt();
+    timeinfo->tm_min = time.substring(11, 13).toInt();
+    timeinfo->tm_sec = time.substring(13, 15).toInt();
+    timeinfo->tm_isdst = -1; // auto-detect DST
+    time_t t = mktime(timeinfo);
+    time_t localTime = tz->toLocal(t);
+    localtime_r(&localTime, timeinfo);
+}
+
 void setup()
 {
     esp_sleep_wakeup_cause_t wakeup_reason = esp_sleep_get_wakeup_cause();
     Serial.begin(115200);
-
-    prefs.begin("calendar");
-    connectToWifi(wakeup_reason);
-
-    struct tm timeinfo;
-    setClock(&timeinfo);
-
-    char timeBuffer[8];
-    strftime(timeBuffer, sizeof(timeBuffer), "%Y%m%d", &timeinfo);
-    Serial.println(timeBuffer);
-
-    std::vector<CalendarEvent> events;
-    getCalendarEvents(events, timeBuffer);
 
     Epd epd;
     if (epd.Init() != 0)
@@ -220,6 +230,29 @@ void setup()
         return;
     }
     epd.Clear();
+
+    prefs.begin("calendar");
+    connectToWifi(wakeup_reason);
+
+    struct tm timeinfo;
+    setClock(&timeinfo);
+
+    char today[9], tomorrow[9];
+    strftime(today, sizeof(today), "%Y%m%d", &timeinfo);
+    timeinfo.tm_mday += 3;
+    mktime(&timeinfo);
+    strftime(tomorrow, sizeof(tomorrow), "%Y%m%d", &timeinfo);
+    Serial.println(today);
+    Serial.println(tomorrow);
+
+    getLocalTime(&timeinfo);
+
+    TimeChangeRule tcr("CEST", Last, Sun, Mar, 2, 120); // Central European Summer Time = UTC + 2 hours
+    TimeChangeRule tcr2("CET", Last, Sun, Oct, 3, 60);  // Central European Standard Time = UTC + 1 hour
+    Timezone europeOslo(tcr, tcr2);
+
+    std::vector<CalendarEvent> events;
+    getCalendarEvents(events, today, tomorrow);
 
     TFT_eSPI tft = TFT_eSPI();
     TFT_eSprite frame = TFT_eSprite(&tft);
@@ -234,33 +267,32 @@ void setup()
     frame.fillSprite(INK_WHITE);              // Fill the screen with back colour
     frame.setTextColor(INK_BLACK, INK_WHITE); // Set text color to green and padding to back
 
-    frame.setTextFont(7);
-    frame.println(&timeinfo, "%Y-%m-%d %H:%M");
+    frame.setTextFont(2);
+    frame.println(&timeinfo, "%A %Y-%m-%d %H:%M");
 
     frame.setFreeFont(&FreeSansNordic9pt7b);
+    frame.println();
+    frame.println();
     for (const auto &event : events)
     {
-        // timeinfo
-        tm timeinfo;
-        timeinfo.tm_year = event.start.substring(0, 4).toInt() - 1900;
-        timeinfo.tm_mon = event.start.substring(4, 6).toInt() - 1;
-        timeinfo.tm_mday = event.start.substring(6, 8).toInt();
-        timeinfo.tm_hour = event.start.substring(9, 11).toInt();
-        timeinfo.tm_min = event.start.substring(11, 13).toInt();
-        timeinfo.tm_sec = event.start.substring(13, 15).toInt();
+        tm start;
+        toLocalTime(event.start, &start, &europeOslo);
+        tm end;
+        toLocalTime(event.end, &end, &europeOslo);
+
         frame.setTextSize(1);
-        frame.println(&timeinfo, "%Y-%m-%d %H:%M");
+        frame.print(&start, "%H:%M");
+        frame.print(" - ");
+        frame.println(&end, "%H:%M");
         frame.setTextSize(1);
         frame.println(event.summary);
         frame.println();
     }
 
-    frame.readPixelValue(0, 0);
+    // make sure we are ready again
+    epd.ReadBusy();
 
     epd.DisplayImage((uint8_t *)frame.frameBuffer(1), 180);
-
-    // epd.Displaypart(IMAGE_DATA, 250, 100, 240, 103, 0);
-    // epd.Display_Part(IMAGE_DATA, 250, 300, 240, 103);
 
     epd.Sleep();
 }
