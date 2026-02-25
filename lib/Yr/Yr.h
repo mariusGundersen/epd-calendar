@@ -1,3 +1,5 @@
+#include <TFT_eSPI.h>
+
 struct Day
 {
     String date;
@@ -7,3 +9,5 @@ struct Day
 };
 
 void getWeather(std::vector<Day> &days);
+
+uint8_t *getWeatherIcon(const String &symbol_code);

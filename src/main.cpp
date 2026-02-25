@@ -8,6 +8,7 @@
 #include <NetworkClientSecure.h>
 #include <Preferences.h>
 #include <FreeSansNordic9pt7b.h>
+#include <FreeSansBold9pt7b.h>
 #include <Timezone.h>
 #include "Yr.h"
 
@@ -335,16 +336,22 @@ void setup()
         frame.println(&timeinfo, "%A");
 
         // weather info
-        frame.setFreeFont(&FreeSansBold9pt7b);
-        frame.fillRect(0, frame.getCursorY(), EPD_WIDTH / 4, 20, INK_WHITE);
+        frame.setFreeFont(&FreeSansBold_extended9pt7b);
+        frame.fillRoundRect(0, frame.getCursorY() - 24, EPD_WIDTH / 4 - padding * 2, 36, 8, INK_LIGHT_GREY);
+        frame.setTextPadding(4);
         for (const auto &weatherDay : weatherDays)
         {
-            if (weatherDay.date == String(today))
+            if (timeinfo.tm_mday == weatherDay.date.substring(8, 10).toInt())
             {
-                frame.printf(" %.1f°C - %.1f°C\n", weatherDay.minTemp, weatherDay.maxTemp);
+                uint8_t *icon = getWeatherIcon(weatherDay.symbol_code);
+                frame.drawXBitmap(4, frame.getCursorY() - 22, icon, 32, 32, INK_BLACK);
+                frame.setCursor(40, frame.getCursorY());
+                frame.printf("%.1f°C - %.1f°C", weatherDay.minTemp, weatherDay.maxTemp);
                 break;
             }
         }
+        frame.setCursor(0, frame.getCursorY() + 32);
+        frame.setTextPadding(0);
 
         for (const auto &event : events)
         {
@@ -358,7 +365,7 @@ void setup()
                 continue;
             }
 
-            frame.setFreeFont(&FreeSansBold9pt7b);
+            frame.setFreeFont(&FreeSansBold_extended9pt7b);
             frame.print(&start, "%H:%M");
             frame.print(" - ");
             frame.println(&end, "%H:%M");
