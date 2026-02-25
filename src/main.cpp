@@ -300,7 +300,8 @@ void setup()
     std::vector<CalendarEvent> events;
     getCalendarEvents(events, today, tomorrow);
 
-    getWeather();
+    std::vector<Day> weatherDays;
+    getWeather(weatherDays);
 
     TFT_eSPI tft = TFT_eSPI();
     TFT_eSprite frame = TFT_eSprite(&tft);
@@ -326,11 +327,25 @@ void setup()
     for (int day = 0; day < 4; day++)
     {
         frame.setViewport(day * EPD_WIDTH / 4 + padding, y, EPD_WIDTH / 4 - padding * 2, EPD_HEIGHT - y);
+        // Day of week
         frame.setFreeFont(&FreeSansBold12pt7b);
         frame.setCursor(0, 0);
         frame.println();
         frame.setTextWrap(true);
         frame.println(&timeinfo, "%A");
+
+        // weather info
+        frame.setFreeFont(&FreeSansBold9pt7b);
+        frame.fillRect(0, frame.getCursorY(), EPD_WIDTH / 4, 20, INK_WHITE);
+        for (const auto &weatherDay : weatherDays)
+        {
+            if (weatherDay.date == String(today))
+            {
+                frame.printf(" %.1f°C - %.1f°C\n", weatherDay.minTemp, weatherDay.maxTemp);
+                break;
+            }
+        }
+
         for (const auto &event : events)
         {
             tm start;

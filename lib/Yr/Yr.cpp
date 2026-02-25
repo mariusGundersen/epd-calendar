@@ -1,6 +1,7 @@
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
 #include <NetworkClientSecure.h>
+#include "Yr.h"
 
 const char *yrRootCACert = "-----BEGIN CERTIFICATE-----\n"
                            "MIIFpDCCA4ygAwIBAgIQOcqTHO9D88aOk8f0ZIk4fjANBgkqhkiG9w0BAQsFADBs\n"
@@ -38,7 +39,56 @@ const char *yrRootCACert = "-----BEGIN CERTIFICATE-----\n"
 
 const String url = "https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=59.91757&lon=10.82044";
 
-void getWeather()
+class HttpStream : public Stream
+{
+private:
+    HTTPClient &_client;
+    Stream &_stream;
+
+public:
+    HttpStream(HTTPClient &client) : _client(client), _stream(client.getStream()) {}
+
+    int available() override
+    {
+        int available = _stream.available();
+        if (available)
+        {
+            return available;
+        }
+
+        while (_client.connected())
+        {
+            available = _stream.available();
+            if (available)
+            {
+                return available;
+            }
+        }
+        return available;
+    }
+
+    int read() override
+    {
+        int read = _stream.read();
+        while (read == -1 && _client.connected())
+        {
+            read = _stream.read();
+        }
+        return read;
+    }
+
+    int peek() override
+    {
+        return _stream.peek();
+    }
+
+    size_t write(uint8_t data) override
+    {
+        return _stream.write(data);
+    }
+};
+
+void getWeather(std::vector<Day> &days)
 {
     NetworkClientSecure client;
     client.setCACert(yrRootCACert);
@@ -49,43 +99,63 @@ void getWeather()
     http.GET();
     JsonDocument filter;
 
-    filter["properties"]["timeseries"][0]["time"] = true;
-    filter["properties"]["timeseries"][0]["data"]["instant"]["details"]["air_temperature"] = true;
-    filter["properties"]["timeseries"][0]["data"]["next_12_hours"]["summary"]["symbol_code"] = true;
+    filter["time"] = true;
+    filter["data"]["instant"]["details"]["air_temperature"] = true;
+    filter["data"]["next_12_hours"]["summary"]["symbol_code"] = true;
 
     JsonDocument doc;
 
-    DeserializationError error = deserializeJson(doc, http.getStream(), DeserializationOption::Filter(filter));
+    HttpStream responseStream(http);
 
-    // Test if parsing succeeds.
-    if (error)
+    responseStream.find("\"timeseries\":[");
+
+    Day currentDayData;
+
+    do
     {
-        Serial.print("deserializeJson() failed: ");
-        Serial.println(error.c_str());
+        DeserializationError error = deserializeJson(doc, responseStream, DeserializationOption::Filter(filter));
+
+        if (error)
+        {
+            Serial.print("deserializeJson() failed: ");
+            Serial.println(error.c_str());
+            return;
+        }
+
+        String time = doc["time"].as<String>();
+        String symbol_code = doc["data"]["next_12_hours"]["summary"]["symbol_code"].as<String>();
+        float temp = doc["data"]["instant"]["details"]["air_temperature"].as<float>();
+
+        if (time.substring(0, 10) != currentDayData.date)
+        {
+            if (currentDayData.date != "")
+            {
+                days.push_back(currentDayData);
+            }
+            String currentDay = time.substring(0, 10);
+            currentDayData = Day{currentDay, 99, -99, symbol_code};
+        }
+
+        if (temp < currentDayData.minTemp)
+        {
+            currentDayData.minTemp = temp;
+        }
+        if (temp > currentDayData.maxTemp)
+        {
+            currentDayData.maxTemp = temp;
+        }
+    } while (responseStream.findUntil(",", "]"));
+
+    // Consume remaining stream data to ensure connection is properly closed
+    while (responseStream.available())
+    {
+        responseStream.read();
     }
 
-    JsonArray properties_timeseries = doc["properties"]["timeseries"];
-
-    double minTemp = 999;
-    double maxTemp = -999;
-
-    for (int i = 0; i < properties_timeseries.size(); i++)
+    for (const auto &day : days)
     {
-        JsonObject data = properties_timeseries[i];
-        String time = data["time"].as<String>();
-        String symbol_code = data["data"]["next_12_hours"]["summary"]["symbol_code"].as<String>();
-        double temp = data["data"]["instant"]["details"]["air_temperature"].as<double>();
-        if (temp < minTemp)
-        {
-            minTemp = temp;
-        }
-        if (temp > maxTemp)
-        {
-            maxTemp = temp;
-        }
-        Serial.printf("%d %s: %f - %s\n", i, time.c_str(), temp, symbol_code.c_str());
+        Serial.printf("%s: %f - %f - %s\n", day.date.c_str(), day.minTemp, day.maxTemp, day.symbol_code.c_str());
     }
 
-    Serial.printf("Min: %f, Max: %f\n", minTemp, maxTemp);
     http.end();
 }
