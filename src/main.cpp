@@ -9,6 +9,7 @@
 #include <Preferences.h>
 #include <FreeSansNordic9pt7b.h>
 #include <Timezone.h>
+#include "Yr.h"
 
 #define uS_TO_S_FACTOR 1000000ULL /* Conversion factor for micro seconds to seconds */
 
@@ -298,6 +299,8 @@ void setup()
 
     std::vector<CalendarEvent> events;
     getCalendarEvents(events, today, tomorrow);
+
+    getWeather();
 
     TFT_eSPI tft = TFT_eSPI();
     TFT_eSprite frame = TFT_eSprite(&tft);
