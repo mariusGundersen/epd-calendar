@@ -127,7 +127,7 @@ void setClock(tm *timeinfo)
     }
 
     gmtime_r(&nowSecs, timeinfo);
-    log_d("Current time: %s", asctime(timeinfo));
+    log_d("Current time: %s\n", asctime(timeinfo));
 }
 
 struct CalendarEvent
@@ -149,8 +149,7 @@ void getCalendarEvents(std::vector<CalendarEvent> &events, String notBefore, Str
     int httpResponseCode = http.GET();
     if (httpResponseCode > 0)
     {
-        Serial.print("HTTP ");
-        Serial.println(httpResponseCode);
+        log_d("HTTP response code: %d\n", httpResponseCode);
         NetworkClient &stream = http.getStream();
         CalendarEvent temp;
         String line;
@@ -159,7 +158,7 @@ void getCalendarEvents(std::vector<CalendarEvent> &events, String notBefore, Str
             line = stream.readStringUntil('\n');
             if (line == "" && !stream.available())
             {
-                Serial.println("End of stream reached");
+                log_d("End of stream reached\n");
                 break;
             }
             line.trim();
@@ -199,19 +198,17 @@ void getCalendarEvents(std::vector<CalendarEvent> &events, String notBefore, Str
         std::sort(events.begin(), events.end(), [](const CalendarEvent &a, const CalendarEvent &b)
                   { return a.start < b.start; });
 
-        Serial.println("Between " + notBefore + " and " + notAfter);
-        Serial.println("Found " + String(events.size()) + " events");
+        log_d("Between %s and %s\n", notBefore.c_str(), notAfter.c_str());
+        log_d("Found %d events", events.size());
         // print all events
         for (const auto &event : events)
         {
-            Serial.println("Event: " + event.start + " - " + event.summary + " - " + event.end);
+            log_d("Event: %s - %s - %s\n", event.start.c_str(), event.summary.c_str(), event.end.c_str());
         }
     }
     else
     {
-        Serial.print("Error code: ");
-        Serial.println(httpResponseCode);
-        Serial.println(":-(");
+        log_d("Error code: %d\n", httpResponseCode);
     }
 }
 
@@ -273,7 +270,7 @@ void setup()
     Epd epd;
     if (epd.Init() != 0)
     {
-        Serial.print("e-Paper init failed");
+        log_d("e-Paper init failed\n");
         return;
     }
     epd.Clear();
@@ -289,8 +286,8 @@ void setup()
     timeinfo.tm_mday += 4;
     mktime(&timeinfo);
     strftime(tomorrow, sizeof(tomorrow), "%Y%m%d", &timeinfo);
-    Serial.println(today);
-    Serial.println(tomorrow);
+    log_d("Today: %s\n", today);
+    log_d("Tomorrow: %s\n", tomorrow);
 
     getLocalTime(&timeinfo);
 

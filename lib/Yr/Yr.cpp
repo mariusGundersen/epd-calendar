@@ -117,8 +117,7 @@ void getWeather(std::vector<Day> &days)
 
         if (error)
         {
-            Serial.print("deserializeJson() failed: ");
-            Serial.println(error.c_str());
+            log_d("deserializeJson() failed: %s\n", error.c_str());
             return;
         }
 
@@ -162,7 +161,7 @@ void getWeather(std::vector<Day> &days)
 
     for (const auto &day : days)
     {
-        Serial.printf("%s: %f - %f - %s\n", day.date.c_str(), day.minTemp, day.maxTemp, day.symbol_code.c_str());
+        log_d("%s: %f - %f - %s\n", day.date.c_str(), day.minTemp, day.maxTemp, day.symbol_code.c_str());
     }
 
     http.end();

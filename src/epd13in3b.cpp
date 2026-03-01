@@ -122,13 +122,13 @@ void Epd::SendData(unsigned char data)
 void Epd::ReadBusy(void)
 {
     unsigned char busy;
-    Serial.print("e-Paper Busy\r\n ");
+    log_d("e-Paper Busy\r\n ");
     do
     {
         DelayMs(20);
         busy = DigitalRead(busy_pin);
     } while (busy == 1);
-    Serial.print("e-Paper Busy Release\r\n ");
+    log_d("e-Paper Busy Release\r\n ");
     DelayMs(20);
 }
 
