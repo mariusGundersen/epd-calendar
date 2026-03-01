@@ -343,7 +343,14 @@ void setup()
                 uint8_t *icon = getWeatherIcon(weatherDay.symbol_code);
                 frame.drawXBitmap(4, frame.getCursorY() - 22, icon, 32, 32, INK_BLACK);
                 frame.setCursor(40, frame.getCursorY());
-                frame.printf("%.1f°C - %.1f°C", weatherDay.minTemp, weatherDay.maxTemp);
+                int minPrecision = weatherDay.minTemp < 10 ? 1 : 0;
+                int maxPrecision = weatherDay.maxTemp < 10 ? 1 : 0;
+                frame.printf("%.*f°C / %.*f°C", minPrecision, weatherDay.minTemp, maxPrecision, weatherDay.maxTemp);
+                int precipitationPrecision = weatherDay.precipitation_amount < 10 ? 1 : 0;
+                frame.printf("   %.*f mm", precipitationPrecision, weatherDay.precipitation_amount);
+                frame.println();
+                // TODO: remove this weatherDay since it has already been consumed
+
                 break;
             }
         }

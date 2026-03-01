@@ -102,6 +102,7 @@ void getWeather(std::vector<Day> &days)
     filter["time"] = true;
     filter["data"]["instant"]["details"]["air_temperature"] = true;
     filter["data"]["next_12_hours"]["summary"]["symbol_code"] = true;
+    filter["data"]["next_1_hours"]["details"]["precipitation_amount"] = true;
 
     JsonDocument doc;
 
@@ -123,6 +124,7 @@ void getWeather(std::vector<Day> &days)
 
         String time = doc["time"].as<String>();
         String symbol_code = doc["data"]["next_12_hours"]["summary"]["symbol_code"].as<String>();
+        float precipitation_amount = doc["data"]["next_1_hours"]["details"]["precipitation_amount"].as<float>();
         float temp = doc["data"]["instant"]["details"]["air_temperature"].as<float>();
 
         if (time.substring(0, 10) != currentDayData.date)
@@ -133,7 +135,7 @@ void getWeather(std::vector<Day> &days)
             }
 
             String currentDay = time.substring(0, 10);
-            currentDayData = Day{currentDay, 99, -99, symbol_code};
+            currentDayData = Day{currentDay, 99, -99, symbol_code, precipitation_amount};
         }
 
         // We want the weather for the day, so we take the symbol code at 06:00.
@@ -143,6 +145,7 @@ void getWeather(std::vector<Day> &days)
             currentDayData.symbol_code = symbol_code;
         }
 
+        // Find the min and max temperature for the day.
         if (temp < currentDayData.minTemp)
         {
             currentDayData.minTemp = temp;
@@ -151,6 +154,8 @@ void getWeather(std::vector<Day> &days)
         {
             currentDayData.maxTemp = temp;
         }
+
+        currentDayData.precipitation_amount += precipitation_amount;
     } while (responseStream.findUntil(",", "]"));
 
     // Consume remaining stream data to ensure connection is properly closed

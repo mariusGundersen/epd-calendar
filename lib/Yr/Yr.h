@@ -6,6 +6,7 @@ struct Day
     float minTemp;
     float maxTemp;
     String symbol_code;
+    float precipitation_amount;
 };
 
 void getWeather(std::vector<Day> &days);
