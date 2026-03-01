@@ -299,7 +299,11 @@ void setup()
     getCalendarEvents(events, today, tomorrow);
 
     std::vector<Day> weatherDays;
-    getWeather(weatherDays, &europeOslo);
+    std::vector<Hour> weatherHours;
+    WeatherRange weatherRange = getWeather(weatherDays, weatherHours, &europeOslo);
+
+    // turn off wifi to save power, we don't need it anymore
+    WiFi.mode(WIFI_OFF);
 
     TFT_eSPI tft = TFT_eSPI();
     TFT_eSprite frame = TFT_eSprite(&tft);
@@ -317,10 +321,56 @@ void setup()
     frame.setFreeFont(&FreeSerifBoldItalic24pt7b);
     frame.setTextSize(1);
     frame.println();
-    frame.println(&timeinfo, "%A %d. %B %Y %H:%M");
+    frame.print(&timeinfo, "%A %d. %B %Y %H:%M");
     frame.setFreeFont(&FreeSansNordic9pt7b);
-    int y = frame.getCursorY();
-    frame.drawWideLine(10, y, EPD_WIDTH - 10, y, 6, INK_RED);
+
+    log_d("Weather range: minTemp=%f, maxTemp=%f, maxPrecipitation=%f\n", weatherRange.minTemp, weatherRange.maxTemp, weatherRange.maxPrecipitation);
+
+    float tempMultiplier = 50.0 / (weatherRange.maxTemp - weatherRange.minTemp);
+    float precipitationMultiplier = (weatherRange.maxTemp * tempMultiplier) / weatherRange.maxPrecipitation;
+    int hourWidth = 10;
+
+    log_d("Temp multiplier: %f\n", tempMultiplier);
+    log_d("Precipitation multiplier: %f\n", precipitationMultiplier);
+
+    int y = frame.getCursorY() + weatherRange.maxTemp * tempMultiplier + 10;
+    frame.drawLine(10, y, EPD_WIDTH - 10, y, INK_GREY);
+
+    int previousTemp = weatherHours.at(0).temperature * tempMultiplier;
+    int previousHour = weatherHours.at(0).hourOffset;
+    frame.drawFastVLine(previousHour * hourWidth, y - weatherRange.maxTemp * tempMultiplier, 50, INK_BLACK);
+    for (const auto &hour : weatherHours)
+    {
+        int hourX = (hour.hourOffset) * hourWidth;
+
+        if (hour.localHour == 0)
+        {
+            frame.drawFastVLine(hourX, y - 8, 16, INK_BLACK);
+        }
+        else if (hour.localHour % 6 == 0)
+        {
+            frame.drawFastVLine(hourX, y - 4, 4, INK_BLACK);
+        }
+
+        int width = (hour.hourOffset - previousHour) * hourWidth;
+        int height = hour.precipitation_amount * precipitationMultiplier;
+        if (height > 0)
+        {
+            frame.fillRect(hourX - width, y - height + 1, width, height, INK_LIGHT_GREY);
+            frame.drawRect(hourX - width, y - height + 1, width, height, INK_BLACK);
+        }
+
+        int tempY = hour.temperature * tempMultiplier;
+        frame.drawLine(hourX - width, y - previousTemp, hourX, y - tempY, INK_RED);
+        frame.drawLine(hourX - width, y - previousTemp - 1, hourX, y - tempY - 1, INK_RED);
+        previousTemp = tempY;
+
+        previousHour = hour.hourOffset;
+    }
+
+    y -= weatherRange.minTemp * tempMultiplier;
+    y += 10;
+
     const int padding = 4;
     for (int day = 0; day < 4; day++)
     {

@@ -91,7 +91,7 @@ public:
 /**
  * Convert from ISO 8601 time format (e.g. "2023-10-01T12:00:00Z") to local time using the provided timezone.
  */
-void iso8601toLocalTime(const String &time, tm *timeinfo, Timezone *tz)
+time_t iso8601toLocalTime(const String &time, tm *timeinfo, Timezone *tz)
 {
     timeinfo->tm_year = time.substring(0, 4).toInt() - 1900;
     timeinfo->tm_mon = time.substring(5, 7).toInt() - 1;
@@ -103,9 +103,10 @@ void iso8601toLocalTime(const String &time, tm *timeinfo, Timezone *tz)
     time_t t = mktime(timeinfo);
     time_t localTime = tz->toLocal(t);
     localtime_r(&localTime, timeinfo);
+    return t;
 }
 
-void getWeather(std::vector<Day> &days, Timezone *tz)
+WeatherRange getWeather(std::vector<Day> &days, std::vector<Hour> &hours, Timezone *tz)
 {
     NetworkClientSecure client;
     client.setCACert(yrRootCACert);
@@ -129,6 +130,12 @@ void getWeather(std::vector<Day> &days, Timezone *tz)
 
     Day currentDayData;
 
+    time_t firstHour = 0;
+
+    float minTemp = 0;
+    float maxTemp = 0;
+    float maxPrecipitation = 0;
+
     do
     {
         DeserializationError error = deserializeJson(doc, responseStream, DeserializationOption::Filter(filter));
@@ -136,15 +143,37 @@ void getWeather(std::vector<Day> &days, Timezone *tz)
         if (error)
         {
             log_d("deserializeJson() failed: %s\n", error.c_str());
-            return;
+            return WeatherRange{minTemp, maxTemp, maxPrecipitation};
         }
 
         tm timeinfo;
         String time = doc["time"].as<String>();
-        iso8601toLocalTime(time, &timeinfo, tz);
+        time_t t = iso8601toLocalTime(time, &timeinfo, tz);
+        if (firstHour == 0)
+        {
+            firstHour = t - (timeinfo.tm_hour * 3600 + timeinfo.tm_min * 60 + timeinfo.tm_sec);
+        }
         String symbol_code = doc["data"]["next_12_hours"]["summary"]["symbol_code"].as<String>();
         float precipitation_amount = doc["data"]["next_1_hours"]["details"]["precipitation_amount"].as<float>();
         float temp = doc["data"]["instant"]["details"]["air_temperature"].as<float>();
+        int hourOffset = (t - firstHour) / 3600;
+
+        if (hourOffset < 960)
+        {
+            if (temp < minTemp)
+            {
+                minTemp = temp;
+            }
+            if (temp > maxTemp)
+            {
+                maxTemp = temp;
+            }
+            if (precipitation_amount > maxPrecipitation)
+            {
+                maxPrecipitation = precipitation_amount;
+            }
+            hours.push_back(Hour{timeinfo.tm_hour, hourOffset, temp, precipitation_amount});
+        }
 
         if (timeinfo.tm_mday != currentDayData.date.tm_mday)
         {
@@ -188,6 +217,8 @@ void getWeather(std::vector<Day> &days, Timezone *tz)
     }
 
     http.end();
+
+    return WeatherRange{minTemp, maxTemp, maxPrecipitation};
 }
 
 static uint8_t cloud_bits[] PROGMEM = {

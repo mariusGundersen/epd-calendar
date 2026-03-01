@@ -10,6 +10,21 @@ struct Day
     float precipitation_amount;
 };
 
-void getWeather(std::vector<Day> &days, Timezone *tz);
+struct Hour
+{
+    int localHour;
+    int hourOffset;
+    float temperature;
+    float precipitation_amount;
+};
+
+struct WeatherRange
+{
+    float minTemp;
+    float maxTemp;
+    float maxPrecipitation;
+};
+
+WeatherRange getWeather(std::vector<Day> &days, std::vector<Hour> &hours, Timezone *tz);
 
 uint8_t *getWeatherIcon(const String &symbol_code);
