@@ -88,7 +88,24 @@ public:
     }
 };
 
-void getWeather(std::vector<Day> &days)
+/**
+ * Convert from ISO 8601 time format (e.g. "2023-10-01T12:00:00Z") to local time using the provided timezone.
+ */
+void iso8601toLocalTime(const String &time, tm *timeinfo, Timezone *tz)
+{
+    timeinfo->tm_year = time.substring(0, 4).toInt() - 1900;
+    timeinfo->tm_mon = time.substring(5, 7).toInt() - 1;
+    timeinfo->tm_mday = time.substring(8, 10).toInt();
+    timeinfo->tm_hour = time.substring(11, 13).toInt();
+    timeinfo->tm_min = time.substring(13, 15).toInt();
+    timeinfo->tm_sec = time.substring(15, 17).toInt();
+    timeinfo->tm_isdst = -1; // auto-detect DST
+    time_t t = mktime(timeinfo);
+    time_t localTime = tz->toLocal(t);
+    localtime_r(&localTime, timeinfo);
+}
+
+void getWeather(std::vector<Day> &days, Timezone *tz)
 {
     NetworkClientSecure client;
     client.setCACert(yrRootCACert);
@@ -122,20 +139,21 @@ void getWeather(std::vector<Day> &days)
             return;
         }
 
+        tm timeinfo;
         String time = doc["time"].as<String>();
+        iso8601toLocalTime(time, &timeinfo, tz);
         String symbol_code = doc["data"]["next_12_hours"]["summary"]["symbol_code"].as<String>();
         float precipitation_amount = doc["data"]["next_1_hours"]["details"]["precipitation_amount"].as<float>();
         float temp = doc["data"]["instant"]["details"]["air_temperature"].as<float>();
 
-        if (time.substring(0, 10) != currentDayData.date)
+        if (timeinfo.tm_mday != currentDayData.date.tm_mday)
         {
-            if (currentDayData.date != "")
+            if (currentDayData.date.tm_mday != 0)
             {
                 days.push_back(currentDayData);
             }
 
-            String currentDay = time.substring(0, 10);
-            currentDayData = Day{currentDay, 99, -99, symbol_code, precipitation_amount};
+            currentDayData = Day{timeinfo, 99, -99, symbol_code, precipitation_amount};
         }
 
         // We want the weather for the day, so we take the symbol code at 06:00.
@@ -166,7 +184,7 @@ void getWeather(std::vector<Day> &days)
 
     for (const auto &day : days)
     {
-        log_d("%s: %f - %f - %s\n", day.date.c_str(), day.minTemp, day.maxTemp, day.symbol_code.c_str());
+        log_d("%04d-%02d-%02d: %f - %f - %s\n", day.date.tm_year + 1900, day.date.tm_mon + 1, day.date.tm_mday, day.minTemp, day.maxTemp, day.symbol_code.c_str());
     }
 
     http.end();

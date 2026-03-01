@@ -299,7 +299,7 @@ void setup()
     getCalendarEvents(events, today, tomorrow);
 
     std::vector<Day> weatherDays;
-    getWeather(weatherDays);
+    getWeather(weatherDays, &europeOslo);
 
     TFT_eSPI tft = TFT_eSPI();
     TFT_eSprite frame = TFT_eSprite(&tft);
@@ -338,7 +338,7 @@ void setup()
         frame.setTextPadding(4);
         for (const auto &weatherDay : weatherDays)
         {
-            if (timeinfo.tm_mday == weatherDay.date.substring(8, 10).toInt())
+            if (timeinfo.tm_mday == weatherDay.date.tm_mday)
             {
                 uint8_t *icon = getWeatherIcon(weatherDay.symbol_code);
                 frame.drawXBitmap(4, frame.getCursorY() - 22, icon, 32, 32, INK_BLACK);
