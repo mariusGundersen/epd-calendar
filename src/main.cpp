@@ -8,7 +8,8 @@
 #include <NetworkClientSecure.h>
 #include <Preferences.h>
 #include <FreeSansNordic9pt7b.h>
-#include <FreeSansBold9pt7b.h>
+#include <FreeSansBoldNordic9pt7b.h>
+#include <FreeSansBoldNordic12pt7b.h>
 #include <Timezone.h>
 #include "Yr.h"
 
@@ -245,6 +246,8 @@ void enterDeepSleep(SleepDuration sleepDuration)
     // if (Serial)
     // Serial.flush();
 
+    sleep(10); // give some time for the message to be sent before sleeping, otherwise it might not be sent at all
+
     esp_deep_sleep_start();
 }
 
@@ -262,10 +265,33 @@ void toLocalTime(const String &time, tm *timeinfo, Timezone *tz)
     localtime_r(&localTime, timeinfo);
 }
 
+const char *getDayOfWeek(int day)
+{
+    switch (day)
+    {
+    case 0:
+        return "Søndag";
+    case 1:
+        return "Mandag";
+    case 2:
+        return "Tirsdag";
+    case 3:
+        return "Onsdag";
+    case 4:
+        return "Torsdag";
+    case 5:
+        return "Fredag";
+    case 6:
+        return "Lørdag";
+    default:
+        return "";
+    }
+}
+
 void setup()
 {
     esp_sleep_wakeup_cause_t wakeup_reason = esp_sleep_get_wakeup_cause();
-    Serial.begin(115200);
+    Serial.begin();
 
     Epd epd;
     if (epd.Init() != 0)
@@ -321,7 +347,7 @@ void setup()
     frame.setFreeFont(&FreeSerifBoldItalic24pt7b);
     frame.setTextSize(1);
     frame.println();
-    frame.print(&timeinfo, "%A %d. %B %Y %H:%M");
+    frame.print(&timeinfo, "%d. %B %Y %H:%M");
     frame.setFreeFont(&FreeSansNordic9pt7b);
 
     log_d("Weather range: minTemp=%f, maxTemp=%f, maxPrecipitation=%f\n", weatherRange.minTemp, weatherRange.maxTemp, weatherRange.maxPrecipitation);
@@ -376,14 +402,14 @@ void setup()
     {
         frame.setViewport(day * EPD_WIDTH / 4 + padding, y, EPD_WIDTH / 4 - padding * 2, EPD_HEIGHT - y);
         // Day of week
-        frame.setFreeFont(&FreeSansBold12pt7b);
+        frame.setFreeFont(&FreeSansBoldNordic12pt7b);
         frame.setCursor(0, 0);
         frame.println();
         frame.setTextWrap(true);
-        frame.println(&timeinfo, "%A");
+        frame.println(getDayOfWeek(timeinfo.tm_wday));
 
         // weather info
-        frame.setFreeFont(&FreeSansBold_extended9pt7b);
+        frame.setFreeFont(&FreeSansBoldNordic9pt7b);
         frame.fillRoundRect(0, frame.getCursorY() - 24, EPD_WIDTH / 4 - padding * 2, 36, 8, INK_LIGHT_GREY);
         frame.setTextPadding(4);
         for (const auto &weatherDay : weatherDays)
@@ -398,7 +424,6 @@ void setup()
                 frame.printf("%.*f°C / %.*f°C", minPrecision, weatherDay.minTemp, maxPrecision, weatherDay.maxTemp);
                 int precipitationPrecision = weatherDay.precipitation_amount < 10 ? 1 : 0;
                 frame.printf("   %.*f mm", precipitationPrecision, weatherDay.precipitation_amount);
-                frame.println();
                 // TODO: remove this weatherDay since it has already been consumed
 
                 break;
@@ -419,7 +444,7 @@ void setup()
                 continue;
             }
 
-            frame.setFreeFont(&FreeSansBold_extended9pt7b);
+            frame.setFreeFont(&FreeSansBoldNordic9pt7b);
             frame.print(&start, "%H:%M");
             frame.print(" - ");
             frame.println(&end, "%H:%M");
@@ -440,7 +465,7 @@ void setup()
 
     epd.Sleep();
 
-    enterDeepSleep(SleepDuration::untilTomorrow);
+    enterDeepSleep(SleepDuration::fiveMinutes);
 }
 
 void loop()

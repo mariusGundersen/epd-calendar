@@ -1,4 +1,4 @@
-const uint8_t FreeSansBold_extended9pt7bBitmaps[] PROGMEM = {
+const uint8_t FreeSansBoldNordic9pt7bBitmaps[] PROGMEM = {
   0xff, 0xff, 0xfe, 0x48, 0x7e,
   0xef, 0xdf, 0xbf, 0x74, 0x40,
   0x19, 0x86, 0x67, 0xfd, 0xff, 0x33, 0x0c, 0xc3, 0x33, 0xfe, 0xff, 0x99, 0x86, 0x61, 0x90,
@@ -96,7 +96,7 @@ const uint8_t FreeSansBold_extended9pt7bBitmaps[] PROGMEM = {
   0x76, 0xe3, 0xb7, 0x00,
 };
 
-const GFXglyph FreeSansBold_extended9pt7bGlyphs[] PROGMEM = {
+const GFXglyph FreeSansBoldNordic9pt7bGlyphs[] PROGMEM = {
   {     0,   0,   0,   5,  0,    1, }, /* 0x20 ' ' */
   {     0,   3,  13,   6,  2,  -12, }, /* 0x21 '!' */
   {     5,   7,   5,   9,  1,  -12, }, /* 0x22 '"' */
@@ -247,7 +247,7 @@ const GFXglyph FreeSansBold_extended9pt7bGlyphs[] PROGMEM = {
   {  1234,   0,   0,   0,  0,    0, }, /* 0xb3 '³' */
 };
 
-const GFXfont FreeSansBold_extended9pt7b PROGMEM = {
-  (uint8_t  *)FreeSansBold_extended9pt7bBitmaps,
-  (GFXglyph *)FreeSansBold_extended9pt7bGlyphs,
+const GFXfont FreeSansBoldNordic9pt7b PROGMEM = {
+  (uint8_t  *)FreeSansBoldNordic9pt7bBitmaps,
+  (GFXglyph *)FreeSansBoldNordic9pt7bGlyphs,
   0x20, 0xb3, 22 };
