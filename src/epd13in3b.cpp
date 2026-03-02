@@ -458,7 +458,7 @@ void Epd::Sleep(void)
     SendCommand(0x10);
     SendData(0x03);
     DelayMs(100);
-    ReadBusy();
+    // ReadBusy();
 }
 
 /* END OF FILE */
