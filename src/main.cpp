@@ -133,6 +133,7 @@ void setClock(tm *timeinfo)
 
 struct CalendarEvent
 {
+    bool fullDay;
     String start;
     String end;
     String summary;
@@ -173,6 +174,7 @@ void getCalendarEvents(std::vector<CalendarEvent> &events, String notBefore, Str
             }
             else if (line.startsWith("DTSTART;VALUE=DATE:"))
             {
+                temp.fullDay = true;
                 temp.start = line.substring(19);
             }
             else if (line.startsWith("DTEND:"))
@@ -181,6 +183,7 @@ void getCalendarEvents(std::vector<CalendarEvent> &events, String notBefore, Str
             }
             else if (line.startsWith("DTEND;VALUE=DATE:"))
             {
+                temp.fullDay = true;
                 temp.end = line.substring(17);
             }
             else if (line.startsWith("SUMMARY:"))
@@ -256,13 +259,27 @@ void toLocalTime(const String &time, tm *timeinfo, Timezone *tz)
     timeinfo->tm_year = time.substring(0, 4).toInt() - 1900;
     timeinfo->tm_mon = time.substring(4, 6).toInt() - 1;
     timeinfo->tm_mday = time.substring(6, 8).toInt();
-    timeinfo->tm_hour = time.substring(9, 11).toInt();
-    timeinfo->tm_min = time.substring(11, 13).toInt();
-    timeinfo->tm_sec = time.substring(13, 15).toInt();
-    timeinfo->tm_isdst = -1; // auto-detect DST
-    time_t t = mktime(timeinfo);
-    time_t localTime = tz->toLocal(t);
-    localtime_r(&localTime, timeinfo);
+    if (time.length() > 8)
+    {
+        timeinfo->tm_hour = time.substring(9, 11).toInt();
+        timeinfo->tm_min = time.substring(11, 13).toInt();
+        timeinfo->tm_sec = time.substring(13, 15).toInt();
+        timeinfo->tm_isdst = -1; // auto-detect DST
+        time_t t = mktime(timeinfo);
+        time_t localTime = tz->toLocal(t);
+        localtime_r(&localTime, timeinfo);
+    }
+    else
+    {
+        timeinfo->tm_isdst = -1; // auto-detect DST
+        time_t t = mktime(timeinfo);
+        time_t localTime = tz->toLocal(t);
+        localtime_r(&localTime, timeinfo);
+        timeinfo->tm_hour = 0;
+        timeinfo->tm_min = 0;
+        timeinfo->tm_sec = 0;
+        log_d("Local time\n%s\n", asctime(timeinfo));
+    }
 }
 
 const char *getDayOfWeek(int day)
@@ -445,9 +462,30 @@ void setup()
             }
 
             frame.setFreeFont(&FreeSansBoldNordic9pt7b);
-            frame.print(&start, "%H:%M");
-            frame.print(" - ");
-            frame.println(&end, "%H:%M");
+            if (event.fullDay)
+            {
+                frame.print("Hele dagen");
+            }
+            else
+            {
+                frame.print(&start, "%H:%M");
+            }
+            if (start.tm_mon != end.tm_mon)
+            {
+                frame.print(" » ");
+                frame.print(&end, "%d. %B");
+            }
+            else if (start.tm_mday != end.tm_mday)
+            {
+                frame.print(" » ");
+                frame.print(getDayOfWeek(end.tm_wday));
+            }
+            else
+            {
+                frame.print(" - ");
+                frame.print(&end, "%H:%M");
+            }
+            frame.println();
             frame.setFreeFont(&FreeSansNordic9pt7b);
             frame.println(event.summary);
             frame.println();

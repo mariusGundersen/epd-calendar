@@ -94,6 +94,7 @@ const uint8_t FreeSansBoldNordic9pt7bBitmaps[] PROGMEM = {
   0xce, 0x66, 0x66, 0x67, 0x76, 0x66, 0x66, 0x6e, 0xc0,
   0x71, 0x8e,
   0x76, 0xe3, 0xb7, 0x00,
+  0x18, 0x06, 0x01, 0x80, 0x6f, 0xff, 0xfc, 0x0c, 0x0c, 0x0c, 0x0c, 0x00,
 };
 
 const GFXglyph FreeSansBoldNordic9pt7bGlyphs[] PROGMEM = {
@@ -245,9 +246,17 @@ const GFXglyph FreeSansBoldNordic9pt7bGlyphs[] PROGMEM = {
   {  1234,   0,   0,   0,  0,    0, }, /* 0xb1 '±' */
   {  1234,   0,   0,   0,  0,    0, }, /* 0xb2 '²' */
   {  1234,   0,   0,   0,  0,    0, }, /* 0xb3 '³' */
+  {  1234,   0,   0,   0,  0,    0, }, /* 0xb4 '´' */
+  {  1234,   0,   0,   0,  0,    0, }, /* 0xb5 'µ' */
+  {  1234,   0,   0,   0,  0,    0, }, /* 0xb6 '¶' */
+  {  1234,   0,   0,   0,  0,    0, }, /* 0xb7 '·' */
+  {  1234,   0,   0,   0,  0,    0, }, /* 0xb8 '¸' */
+  {  1234,   0,   0,   0,  0,    0, }, /* 0xb9 '¹' */
+  {  1234,   0,   0,   0,  0,    0, }, /* 0xba 'º' */
+  {  1234,   9,  10,   5,  0,   -9, }, /* 0xbb '»' */
 };
 
 const GFXfont FreeSansBoldNordic9pt7b PROGMEM = {
   (uint8_t  *)FreeSansBoldNordic9pt7bBitmaps,
   (GFXglyph *)FreeSansBoldNordic9pt7bGlyphs,
-  0x20, 0xb3, 22 };
+  0x20, 0xbb, 22 };
