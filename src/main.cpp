@@ -12,6 +12,7 @@
 #include <FreeSansBoldNordic12pt7b.h>
 #include <Timezone.h>
 #include "Yr.h"
+#include "Battery.h"
 
 #define uS_TO_S_FACTOR 1000000ULL /* Conversion factor for micro seconds to seconds */
 
@@ -282,28 +283,28 @@ void toLocalTime(const String &time, tm *timeinfo, Timezone *tz)
     }
 }
 
-const char *getDayOfWeek(int day)
-{
-    switch (day)
-    {
-    case 0:
-        return "Søndag";
-    case 1:
-        return "Mandag";
-    case 2:
-        return "Tirsdag";
-    case 3:
-        return "Onsdag";
-    case 4:
-        return "Torsdag";
-    case 5:
-        return "Fredag";
-    case 6:
-        return "Lørdag";
-    default:
-        return "";
-    }
-}
+const char *months[] = {
+    "Januar",
+    "Februar",
+    "Mars",
+    "April",
+    "Mai",
+    "Juni",
+    "Juli",
+    "August",
+    "September",
+    "Oktober",
+    "November",
+    "Desember"};
+
+const char *weekdays[] = {
+    "Søndag",
+    "Mandag",
+    "Tirsdag",
+    "Onsdag",
+    "Torsdag",
+    "Fredag",
+    "Lørdag"};
 
 void setup()
 {
@@ -348,6 +349,8 @@ void setup()
     // turn off wifi to save power, we don't need it anymore
     WiFi.mode(WIFI_OFF);
 
+    Battery battery = getBatteryStatus();
+
     TFT_eSPI tft = TFT_eSPI();
     TFT_eSprite frame = TFT_eSprite(&tft);
 
@@ -364,13 +367,13 @@ void setup()
     frame.setFreeFont(&FreeSerifBoldItalic24pt7b);
     frame.setTextSize(1);
     frame.println();
-    frame.print(&timeinfo, "%d. %B %Y %H:%M");
+    frame.printf("%d. %s %d", timeinfo.tm_mday, months[timeinfo.tm_mon], timeinfo.tm_year + 1900);
     frame.setFreeFont(&FreeSansNordic9pt7b);
 
     log_d("Weather range: minTemp=%f, maxTemp=%f, maxPrecipitation=%f\n", weatherRange.minTemp, weatherRange.maxTemp, weatherRange.maxPrecipitation);
 
     float tempMultiplier = 50.0 / (weatherRange.maxTemp - weatherRange.minTemp);
-    float precipitationMultiplier = (weatherRange.maxTemp * tempMultiplier) / weatherRange.maxPrecipitation;
+    float precipitationMultiplier = (weatherRange.maxTemp * tempMultiplier) / max(weatherRange.maxPrecipitation, 4.0f);
     int hourWidth = 10;
 
     log_d("Temp multiplier: %f\n", tempMultiplier);
@@ -423,7 +426,7 @@ void setup()
         frame.setCursor(0, 0);
         frame.println();
         frame.setTextWrap(true);
-        frame.println(getDayOfWeek(timeinfo.tm_wday));
+        frame.println(weekdays[timeinfo.tm_wday]);
 
         // weather info
         frame.setFreeFont(&FreeSansBoldNordic9pt7b);
@@ -478,7 +481,7 @@ void setup()
             else if (start.tm_mday != end.tm_mday)
             {
                 frame.print(" » ");
-                frame.print(getDayOfWeek(end.tm_wday));
+                frame.print(weekdays[end.tm_wday]);
             }
             else
             {
@@ -496,6 +499,15 @@ void setup()
         mktime(&timeinfo);
     }
 
+    frame.setViewport(0, 0, EPD_WIDTH, EPD_HEIGHT);
+
+    frame.setTextDatum(BR_DATUM);
+
+    char buffer[64];
+    strftime(buffer, 64, "%H:%M %d %m", &timeinfo);
+
+    frame.drawString("Sist oppdatert: " + String(buffer) + " (" + String(battery.cellVoltage) + "V)", EPD_WIDTH - 5, EPD_HEIGHT - 5, 1);
+
     // make sure we are ready again
     epd.ReadBusy();
 
@@ -503,7 +515,7 @@ void setup()
 
     epd.Sleep();
 
-    enterDeepSleep(SleepDuration::fiveMinutes);
+    enterDeepSleep(SleepDuration::untilTomorrow);
 }
 
 void loop()
