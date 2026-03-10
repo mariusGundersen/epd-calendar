@@ -10,6 +10,7 @@
 #include <FreeSansNordic9pt7b.h>
 #include <FreeSansBoldNordic9pt7b.h>
 #include <FreeSansBoldNordic12pt7b.h>
+#include <SmallTemp.h>
 #include <Timezone.h>
 #include "Yr.h"
 #include "Battery.h"
@@ -145,75 +146,90 @@ void getCalendarEvents(std::vector<CalendarEvent> &events, String notBefore, Str
     NetworkClientSecure client;
 
     client.setCACert(googleRootCACert);
-    String url = prefs.getString("ical_url");
-    HTTPClient http;
-    http.begin(client, url);
+    String urls = prefs.getString("ical_url");
+    urls.concat(' ');
 
-    int httpResponseCode = http.GET();
-    if (httpResponseCode > 0)
+    HTTPClient http;
+
+    int start = 0;
+    int separator = urls.indexOf(' ');
+
+    while (separator != -1)
     {
-        log_d("HTTP response code: %d\n", httpResponseCode);
-        NetworkClient &stream = http.getStream();
-        CalendarEvent temp;
-        String line;
-        while (http.connected())
+
+        String url = urls.substring(start, separator);
+
+        http.begin(client, url);
+
+        int httpResponseCode = http.GET();
+        if (httpResponseCode > 0)
         {
-            line = stream.readStringUntil('\n');
-            if (line == "" && !stream.available())
+            log_d("HTTP response code: %d\n", httpResponseCode);
+            NetworkClient &stream = http.getStream();
+            CalendarEvent temp;
+            String line;
+            while (http.connected())
             {
-                log_d("End of stream reached\n");
-                break;
-            }
-            line.trim();
-            if (line == "BEGIN:VEVENT")
-            {
-                temp = CalendarEvent();
-            }
-            else if (line.startsWith("DTSTART:"))
-            {
-                temp.start = line.substring(8);
-            }
-            else if (line.startsWith("DTSTART;VALUE=DATE:"))
-            {
-                temp.fullDay = true;
-                temp.start = line.substring(19);
-            }
-            else if (line.startsWith("DTEND:"))
-            {
-                temp.end = line.substring(6);
-            }
-            else if (line.startsWith("DTEND;VALUE=DATE:"))
-            {
-                temp.fullDay = true;
-                temp.end = line.substring(17);
-            }
-            else if (line.startsWith("SUMMARY:"))
-            {
-                temp.summary = line.substring(8);
-            }
-            else if (line == "END:VEVENT")
-            {
-                if (temp.start < notAfter && temp.end > notBefore)
+                line = stream.readStringUntil('\n');
+                if (line == "" && !stream.available())
                 {
-                    events.push_back(temp);
+                    log_d("End of stream reached\n");
+                    break;
+                }
+                line.trim();
+                if (line == "BEGIN:VEVENT")
+                {
+                    temp = CalendarEvent();
+                }
+                else if (line.startsWith("DTSTART:"))
+                {
+                    temp.start = line.substring(8);
+                }
+                else if (line.startsWith("DTSTART;VALUE=DATE:"))
+                {
+                    temp.fullDay = true;
+                    temp.start = line.substring(19);
+                }
+                else if (line.startsWith("DTEND:"))
+                {
+                    temp.end = line.substring(6);
+                }
+                else if (line.startsWith("DTEND;VALUE=DATE:"))
+                {
+                    temp.fullDay = true;
+                    temp.end = line.substring(17);
+                }
+                else if (line.startsWith("SUMMARY:"))
+                {
+                    temp.summary = line.substring(8);
+                }
+                else if (line == "END:VEVENT")
+                {
+                    if (temp.start < notAfter && temp.end > notBefore)
+                    {
+                        events.push_back(temp);
+                    }
                 }
             }
         }
-
-        std::sort(events.begin(), events.end(), [](const CalendarEvent &a, const CalendarEvent &b)
-                  { return a.start < b.start; });
-
-        log_d("Between %s and %s\n", notBefore.c_str(), notAfter.c_str());
-        log_d("Found %d events", events.size());
-        // print all events
-        for (const auto &event : events)
+        else
         {
-            log_d("Event: %s - %s - %s\n", event.start.c_str(), event.summary.c_str(), event.end.c_str());
+            log_d("Error code: %d\n", httpResponseCode);
         }
+
+        start = separator + 1;
+        separator = urls.indexOf(' ', start);
     }
-    else
+
+    std::sort(events.begin(), events.end(), [](const CalendarEvent &a, const CalendarEvent &b)
+              { return a.start < b.start; });
+
+    log_d("Between %s and %s\n", notBefore.c_str(), notAfter.c_str());
+    log_d("Found %d events", events.size());
+    // print all events
+    for (const auto &event : events)
     {
-        log_d("Error code: %d\n", httpResponseCode);
+        log_d("Event: %s - %s - %s\n", event.start.c_str(), event.summary.c_str(), event.end.c_str());
     }
 }
 
@@ -306,6 +322,71 @@ const char *weekdays[] = {
     "Fredag",
     "Lørdag"};
 
+void drawMeteogram(TFT_eSprite frame, WeatherRange weatherRange, std::vector<Hour> &weatherHours)
+{
+    log_d("Weather range: minTemp=%f, maxTemp=%f, maxPrecipitation=%f\n", weatherRange.minTemp, weatherRange.maxTemp, weatherRange.maxPrecipitation);
+
+    float minTemp = min(0.0f, weatherRange.minTemp);
+    float maxTemp = max(4.0f, weatherRange.maxTemp);
+    float tempMultiplier = (frame.height() - 10) / (maxTemp - minTemp);
+    float zeroY = 10 + (maxTemp * tempMultiplier);
+    float maxPrecipitation = max(weatherRange.maxPrecipitation, 4.0f);
+    float precipitationMultiplier = zeroY / maxPrecipitation;
+    int hourWidth = 10;
+
+    log_d("Temp multiplier: %f\n", tempMultiplier);
+    log_d("Precipitation multiplier: %f\n", precipitationMultiplier);
+    frame.drawFastHLine(10, zeroY, frame.width() - 10, INK_GREY);
+
+    int previousTemp = weatherHours.at(0).temperature * tempMultiplier;
+    int previousHour = weatherHours.at(0).hourOffset;
+
+    // vertical now line
+    frame.drawFastVLine(previousHour * hourWidth, 0, frame.height(), INK_BLACK);
+
+    frame.setFreeFont(&SmallTemp);
+
+    // Max temperature
+    char temp[10];
+    sprintf(temp, "%.0f°C ", maxTemp);
+    frame.setTextDatum(TR_DATUM);
+    frame.drawString(temp, previousHour * hourWidth, 0);
+
+    // Min temperature
+    sprintf(temp, "%.0f°C ", minTemp);
+    frame.setTextDatum(BR_DATUM);
+    frame.drawString(temp, previousHour * hourWidth, frame.height());
+
+    for (const auto &hour : weatherHours)
+    {
+        int hourX = (hour.hourOffset) * hourWidth;
+
+        if (hour.hourOffset % 24 == 0)
+        {
+            frame.drawFastVLine(hourX, zeroY - 8, 16, INK_BLACK);
+        }
+        else if (hour.hourOffset % 6 == 0)
+        {
+            frame.drawFastVLine(hourX, zeroY - 4, 4, INK_BLACK);
+        }
+
+        int width = (hour.hourOffset - previousHour) * hourWidth;
+        int height = hour.precipitation_amount * precipitationMultiplier;
+        if (height > 0)
+        {
+            frame.fillRect(hourX - width, zeroY - height + 1, width, height, INK_LIGHT_GREY);
+            frame.drawRect(hourX - width, zeroY - height + 1, width, height, INK_BLACK);
+        }
+
+        int tempY = hour.temperature * tempMultiplier;
+        frame.drawLine(hourX - width, zeroY - previousTemp, hourX, zeroY - tempY, INK_RED);
+        frame.drawLine(hourX - width, zeroY - previousTemp - 1, hourX, zeroY - tempY - 1, INK_RED);
+        previousTemp = tempY;
+
+        previousHour = hour.hourOffset;
+    }
+}
+
 void setup()
 {
     esp_sleep_wakeup_cause_t wakeup_reason = esp_sleep_get_wakeup_cause();
@@ -370,52 +451,13 @@ void setup()
     frame.printf("%d. %s %d", timeinfo.tm_mday, months[timeinfo.tm_mon], timeinfo.tm_year + 1900);
     frame.setFreeFont(&FreeSansNordic9pt7b);
 
-    log_d("Weather range: minTemp=%f, maxTemp=%f, maxPrecipitation=%f\n", weatherRange.minTemp, weatherRange.maxTemp, weatherRange.maxPrecipitation);
+    int y = frame.getCursorY() + 10;
+    frame.setViewport(0, y, EPD_WIDTH, 60);
 
-    float tempMultiplier = 50.0 / (weatherRange.maxTemp - weatherRange.minTemp);
-    float precipitationMultiplier = (weatherRange.maxTemp * tempMultiplier) / max(weatherRange.maxPrecipitation, 4.0f);
-    int hourWidth = 10;
+    drawMeteogram(frame, weatherRange, weatherHours);
 
-    log_d("Temp multiplier: %f\n", tempMultiplier);
-    log_d("Precipitation multiplier: %f\n", precipitationMultiplier);
-
-    int y = frame.getCursorY() + weatherRange.maxTemp * tempMultiplier + 10;
-    frame.drawLine(10, y, EPD_WIDTH - 10, y, INK_GREY);
-
-    int previousTemp = weatherHours.at(0).temperature * tempMultiplier;
-    int previousHour = weatherHours.at(0).hourOffset;
-    frame.drawFastVLine(previousHour * hourWidth, y - weatherRange.maxTemp * tempMultiplier, 50, INK_BLACK);
-    for (const auto &hour : weatherHours)
-    {
-        int hourX = (hour.hourOffset) * hourWidth;
-
-        if (hour.localHour == 0)
-        {
-            frame.drawFastVLine(hourX, y - 8, 16, INK_BLACK);
-        }
-        else if (hour.localHour % 6 == 0)
-        {
-            frame.drawFastVLine(hourX, y - 4, 4, INK_BLACK);
-        }
-
-        int width = (hour.hourOffset - previousHour) * hourWidth;
-        int height = hour.precipitation_amount * precipitationMultiplier;
-        if (height > 0)
-        {
-            frame.fillRect(hourX - width, y - height + 1, width, height, INK_LIGHT_GREY);
-            frame.drawRect(hourX - width, y - height + 1, width, height, INK_BLACK);
-        }
-
-        int tempY = hour.temperature * tempMultiplier;
-        frame.drawLine(hourX - width, y - previousTemp, hourX, y - tempY, INK_RED);
-        frame.drawLine(hourX - width, y - previousTemp - 1, hourX, y - tempY - 1, INK_RED);
-        previousTemp = tempY;
-
-        previousHour = hour.hourOffset;
-    }
-
-    y -= weatherRange.minTemp * tempMultiplier;
-    y += 10;
+    // height of box is 50px and 10px padding at bottom
+    y += 10 + 50;
 
     const int padding = 4;
     for (int day = 0; day < 4; day++)
@@ -430,6 +472,7 @@ void setup()
 
         // weather info
         frame.setFreeFont(&FreeSansBoldNordic9pt7b);
+        frame.setCursor(0, frame.getCursorY() + 4);
         frame.fillRoundRect(0, frame.getCursorY() - 24, EPD_WIDTH / 4 - padding * 2, 36, 8, INK_LIGHT_GREY);
         frame.setTextPadding(4);
         for (const auto &weatherDay : weatherDays)
@@ -504,9 +547,10 @@ void setup()
     frame.setTextDatum(BR_DATUM);
 
     char buffer[64];
-    strftime(buffer, 64, "%H:%M %d %m", &timeinfo);
+    strftime(buffer, 64, "%H:%M %d/%m", &timeinfo);
 
-    frame.drawString("Sist oppdatert: " + String(buffer) + " (" + String(battery.cellVoltage) + "V)", EPD_WIDTH - 5, EPD_HEIGHT - 5, 1);
+    frame.setTextFont(1);
+    frame.drawString("Sist oppdatert: " + String(buffer) + " (" + String(battery.cellVoltage) + "V)", EPD_WIDTH - 5, EPD_HEIGHT - 5);
 
     // make sure we are ready again
     epd.ReadBusy();
@@ -516,6 +560,8 @@ void setup()
     epd.Sleep();
 
     enterDeepSleep(SleepDuration::untilTomorrow);
+
+    // esp_light_sleep_start();
 }
 
 void loop()

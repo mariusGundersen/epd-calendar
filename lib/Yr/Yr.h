@@ -12,10 +12,10 @@ struct Day
 
 struct Hour
 {
-    int localHour;
     int hourOffset;
     float temperature;
     float precipitation_amount;
+    String symbol;
 };
 
 struct WeatherRange

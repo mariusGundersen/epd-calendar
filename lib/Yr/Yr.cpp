@@ -120,7 +120,9 @@ WeatherRange getWeather(std::vector<Day> &days, std::vector<Hour> &hours, Timezo
     filter["time"] = true;
     filter["data"]["instant"]["details"]["air_temperature"] = true;
     filter["data"]["next_12_hours"]["summary"]["symbol_code"] = true;
+    filter["data"]["next_6_hours"]["summary"]["symbol_code"] = true;
     filter["data"]["next_1_hours"]["details"]["precipitation_amount"] = true;
+    filter["data"]["next_6_hours"]["details"]["precipitation_amount"] = true;
 
     JsonDocument doc;
 
@@ -153,12 +155,23 @@ WeatherRange getWeather(std::vector<Day> &days, std::vector<Hour> &hours, Timezo
         {
             firstHour = t - (timeinfo.tm_hour * 3600 + timeinfo.tm_min * 60 + timeinfo.tm_sec);
         }
-        String symbol_code = doc["data"]["next_12_hours"]["summary"]["symbol_code"].as<String>();
-        float precipitation_amount = doc["data"]["next_1_hours"]["details"]["precipitation_amount"].as<float>();
-        float temp = doc["data"]["instant"]["details"]["air_temperature"].as<float>();
+        JsonObject data = doc["data"].as<JsonObject>();
+        String symbol_code = data["next_12_hours"]["summary"]["symbol_code"].as<String>();
+        bool is6Hour = data["next_1_hours"].isUnbound();
+
+        float precipitation_amount = is6Hour
+                                         ? data["next_6_hours"]["details"]["precipitation_amount"].as<float>()
+                                         : data["next_1_hours"]["details"]["precipitation_amount"].as<float>();
+        String symbol = is6Hour
+                            ? data["next_6_hours"]["summary"]["symbol_code"].as<String>()
+                            : data["next_1_hours"]["summary"]["symbol_code"].as<String>();
+
+        float temp = data["instant"]["details"]["air_temperature"].as<float>();
         int hourOffset = (t - firstHour) / 3600;
 
-        if (hourOffset < 960)
+        log_d("%s: has 6 hours: %d, precipitotion: %f %s", time.c_str(), is6Hour, precipitation_amount, symbol.c_str());
+
+        if (hourOffset < 24 * 4)
         {
             if (temp < minTemp)
             {
@@ -168,11 +181,16 @@ WeatherRange getWeather(std::vector<Day> &days, std::vector<Hour> &hours, Timezo
             {
                 maxTemp = temp;
             }
-            if (precipitation_amount > maxPrecipitation)
+            float precipitation_per_hour = is6Hour ? precipitation_amount / 6.0 : precipitation_amount;
+            if (precipitation_per_hour > maxPrecipitation)
             {
-                maxPrecipitation = precipitation_amount;
+                maxPrecipitation = precipitation_per_hour;
             }
-            hours.push_back(Hour{timeinfo.tm_hour, hourOffset, temp, precipitation_amount});
+            hours.push_back(Hour{
+                hourOffset,
+                temp,
+                precipitation_per_hour,
+                symbol});
         }
 
         if (timeinfo.tm_mday != currentDayData.date.tm_mday)
