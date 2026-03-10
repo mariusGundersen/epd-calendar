@@ -159,17 +159,17 @@ WeatherRange getWeather(std::vector<Day> &days, std::vector<Hour> &hours, Timezo
         String symbol_code = data["next_12_hours"]["summary"]["symbol_code"].as<String>();
         bool is6Hour = data["next_1_hours"].isUnbound();
 
-        float precipitation_amount = is6Hour
-                                         ? data["next_6_hours"]["details"]["precipitation_amount"].as<float>()
-                                         : data["next_1_hours"]["details"]["precipitation_amount"].as<float>();
-        String symbol = is6Hour
-                            ? data["next_6_hours"]["summary"]["symbol_code"].as<String>()
-                            : data["next_1_hours"]["summary"]["symbol_code"].as<String>();
+        JsonObject hoursObj = is6Hour
+                                  ? data["next_6_hours"]
+                                  : data["next_1_hours"];
+
+        float precipitation_amount = hoursObj["details"]["precipitation_amount"].as<float>();
+        String symbol = hoursObj["summary"]["symbol_code"].as<String>();
 
         float temp = data["instant"]["details"]["air_temperature"].as<float>();
         int hourOffset = (t - firstHour) / 3600;
 
-        log_d("%s: has 6 hours: %d, precipitotion: %f %s", time.c_str(), is6Hour, precipitation_amount, symbol.c_str());
+        log_d("%s: time: %d", time.c_str(), timeinfo.tm_hour);
 
         if (hourOffset < 24 * 4)
         {

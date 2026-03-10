@@ -357,18 +357,21 @@ void drawMeteogram(TFT_eSprite frame, WeatherRange weatherRange, std::vector<Hou
     frame.setTextDatum(BR_DATUM);
     frame.drawString(temp, previousHour * hourWidth, frame.height());
 
+    for (int h = 1; h < 24 * 4; h++)
+    {
+        if (h % 24 == 0)
+        {
+            frame.drawFastVLine(h * hourWidth, zeroY - 8, 16, INK_BLACK);
+        }
+        else if (h % 6 == 0)
+        {
+            frame.drawFastVLine(h * hourWidth, zeroY - 4, 4, INK_BLACK);
+        }
+    }
+
     for (const auto &hour : weatherHours)
     {
         int hourX = (hour.hourOffset) * hourWidth;
-
-        if (hour.hourOffset % 24 == 0)
-        {
-            frame.drawFastVLine(hourX, zeroY - 8, 16, INK_BLACK);
-        }
-        else if (hour.hourOffset % 6 == 0)
-        {
-            frame.drawFastVLine(hourX, zeroY - 4, 4, INK_BLACK);
-        }
 
         int width = (hour.hourOffset - previousHour) * hourWidth;
         int height = hour.precipitation_amount * precipitationMultiplier;
