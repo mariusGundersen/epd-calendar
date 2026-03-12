@@ -19,7 +19,8 @@
 
 enum struct SleepDuration
 {
-    untilTomorrow,
+    untilTomorrow0300,
+    until5AmOrPm,
     untilNextHour,
     fiveMinutes
 };
@@ -235,23 +236,52 @@ void getCalendarEvents(std::vector<CalendarEvent> &events, String notBefore, Str
 
 void enterDeepSleep(SleepDuration sleepDuration)
 {
-    time_t nowSecs = time(nullptr);
     struct tm timeinfo;
-    gmtime_r(&nowSecs, &timeinfo);
+    getLocalTime(&timeinfo);
 
-    int hoursToSleep = sleepDuration == SleepDuration::untilTomorrow ? 3 - timeinfo.tm_hour : 0;
-    if (sleepDuration == SleepDuration::untilTomorrow && hoursToSleep < 1)
-    {
-        hoursToSleep += 24;
-    }
+    int hoursToSleep = 0;
 
-    int minutesToSleep = sleepDuration == SleepDuration::fiveMinutes ? 5 : 59 - timeinfo.tm_min;
+    int minutesToSleep = 59 - timeinfo.tm_min;
     if (minutesToSleep < 5)
     {
         minutesToSleep += 60;
     }
 
     int secondsToSleep = 60 - timeinfo.tm_sec;
+
+    switch (sleepDuration)
+    {
+    case SleepDuration::untilTomorrow0300:
+    {
+        hoursToSleep = 3 - timeinfo.tm_hour;
+        if (hoursToSleep < 1)
+        {
+            hoursToSleep += 24;
+        }
+
+        break;
+    }
+    case SleepDuration::until5AmOrPm:
+    {
+        hoursToSleep = 5 - timeinfo.tm_hour;
+        if (hoursToSleep < 1)
+        {
+            hoursToSleep += 24;
+        }
+        if (hoursToSleep > 12)
+        {
+            hoursToSleep -= 12;
+        }
+
+        break;
+    }
+    case SleepDuration::fiveMinutes:
+    {
+        minutesToSleep = 5;
+        break;
+    }
+    }
+
     int sleepTime = (hoursToSleep * 60 + minutesToSleep) * 60 + secondsToSleep;
 
     esp_sleep_enable_timer_wakeup(sleepTime * uS_TO_S_FACTOR);
@@ -580,7 +610,7 @@ void setup()
 
     epd.Sleep();
 
-    enterDeepSleep(SleepDuration::untilTomorrow);
+    enterDeepSleep(SleepDuration::until5AmOrPm);
 
     // esp_light_sleep_start();
 }
