@@ -48,7 +48,7 @@ jobs:
         uses: mgoltzsche/conventional-release@v0
         with:
           github-release-files: .pio/build/release/firmware.bin
-          #ignore-commits-before: 2eb3ca4f
+          ignore-commits-before: bf5e4d2
 
       - name: Build PlatformIO
         run: platformio run -e release
