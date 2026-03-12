@@ -27,4 +27,5 @@ struct WeatherRange
 
 WeatherRange getWeather(std::vector<Day> &days, std::vector<Hour> &hours, Timezone *tz);
 
-uint8_t *getWeatherIcon(const String &symbol_code);
+uint8_t *getWeatherIcon32(const String &symbol_code);
+uint8_t *getWeatherIcon16(const String &symbol_code);

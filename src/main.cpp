@@ -326,23 +326,28 @@ void drawMeteogram(TFT_eSprite frame, WeatherRange weatherRange, std::vector<Hou
 {
     log_d("Weather range: minTemp=%f, maxTemp=%f, maxPrecipitation=%f\n", weatherRange.minTemp, weatherRange.maxTemp, weatherRange.maxPrecipitation);
 
+    int yOffset = 20;
+    int yPaddingBottom = 10;
+    int height = frame.height() - yOffset - yPaddingBottom;
+    int width = frame.width();
+
     float minTemp = min(0.0f, weatherRange.minTemp);
     float maxTemp = max(4.0f, weatherRange.maxTemp);
-    float tempMultiplier = (frame.height() - 10) / (maxTemp - minTemp);
-    float zeroY = 10 + (maxTemp * tempMultiplier);
+    float tempMultiplier = (height) / (maxTemp - minTemp);
+    float zeroY = yOffset + (maxTemp * tempMultiplier);
     float maxPrecipitation = max(weatherRange.maxPrecipitation, 4.0f);
-    float precipitationMultiplier = zeroY / maxPrecipitation;
+    float precipitationMultiplier = (maxTemp * tempMultiplier) / maxPrecipitation;
     int hourWidth = 10;
 
     log_d("Temp multiplier: %f\n", tempMultiplier);
     log_d("Precipitation multiplier: %f\n", precipitationMultiplier);
-    frame.drawFastHLine(10, zeroY, frame.width() - 10, INK_GREY);
+    frame.drawFastHLine(10, zeroY, width - 10, INK_GREY);
 
     int previousTemp = weatherHours.at(0).temperature * tempMultiplier;
     int previousHour = weatherHours.at(0).hourOffset;
 
     // vertical now line
-    frame.drawFastVLine(previousHour * hourWidth, 0, frame.height(), INK_BLACK);
+    frame.drawFastVLine(previousHour * hourWidth, yOffset, height, INK_BLACK);
 
     frame.setFreeFont(&SmallTemp);
 
@@ -350,12 +355,12 @@ void drawMeteogram(TFT_eSprite frame, WeatherRange weatherRange, std::vector<Hou
     char temp[10];
     sprintf(temp, "%.0f°C ", maxTemp);
     frame.setTextDatum(TR_DATUM);
-    frame.drawString(temp, previousHour * hourWidth, 0);
+    frame.drawString(temp, previousHour * hourWidth, yOffset);
 
     // Min temperature
     sprintf(temp, "%.0f°C ", minTemp);
     frame.setTextDatum(BR_DATUM);
-    frame.drawString(temp, previousHour * hourWidth, frame.height());
+    frame.drawString(temp, previousHour * hourWidth, yOffset + height);
 
     for (int h = 1; h < 24 * 4; h++)
     {
@@ -366,24 +371,37 @@ void drawMeteogram(TFT_eSprite frame, WeatherRange weatherRange, std::vector<Hou
         else if (h % 6 == 0)
         {
             frame.drawFastVLine(h * hourWidth, zeroY - 4, 4, INK_BLACK);
+            frame.setTextDatum(TC_DATUM);
+            frame.drawString(String(h % 24), h * hourWidth, zeroY + 2);
         }
     }
 
-    for (const auto &hour : weatherHours)
+    for (int h = 0; h < weatherHours.size(); h++)
     {
+        Hour hour = weatherHours.at(h);
         int hourX = (hour.hourOffset) * hourWidth;
 
-        int width = (hour.hourOffset - previousHour) * hourWidth;
-        int height = hour.precipitation_amount * precipitationMultiplier;
-        if (height > 0)
+        if (h < weatherHours.size() - 1)
         {
-            frame.fillRect(hourX - width, zeroY - height + 1, width, height, INK_LIGHT_GREY);
-            frame.drawRect(hourX - width, zeroY - height + 1, width, height, INK_BLACK);
+            Hour nextHour = weatherHours.at(h + 1);
+            int width = (nextHour.hourOffset - hour.hourOffset) * hourWidth;
+            int height = hour.precipitation_amount * precipitationMultiplier;
+            if (height > 0)
+            {
+                frame.fillRect(hourX, zeroY - height + 1, width, height, INK_LIGHT_GREY);
+                frame.drawRect(hourX, zeroY - height + 1, width, height, INK_BLACK);
+            }
         }
 
         int tempY = hour.temperature * tempMultiplier;
-        frame.drawLine(hourX - width, zeroY - previousTemp, hourX, zeroY - tempY, INK_RED);
-        frame.drawLine(hourX - width, zeroY - previousTemp - 1, hourX, zeroY - tempY - 1, INK_RED);
+        frame.drawLine(previousHour * hourWidth, zeroY - previousTemp, hourX, zeroY - tempY, INK_RED);
+        frame.drawLine(previousHour * hourWidth, zeroY - previousTemp - 1, hourX, zeroY - tempY - 1, INK_RED);
+
+        if (hour.hourOffset % 2 == 1)
+        {
+            frame.drawXBitmap(hourX - 8, zeroY - tempY - 20, getWeatherIcon16(hour.symbol), 16, 16, INK_BLACK);
+        }
+
         previousTemp = tempY;
 
         previousHour = hour.hourOffset;
@@ -455,12 +473,12 @@ void setup()
     frame.setFreeFont(&FreeSansNordic9pt7b);
 
     int y = frame.getCursorY() + 10;
-    frame.setViewport(0, y, EPD_WIDTH, 60);
+    frame.setViewport(0, y - 10, EPD_WIDTH, 70);
 
     drawMeteogram(frame, weatherRange, weatherHours);
 
-    // height of box is 50px and 10px padding at bottom
-    y += 10 + 50;
+    // height of box is 60px and 10px padding at bottom
+    y += 10 + 60;
 
     const int padding = 4;
     for (int day = 0; day < 4; day++)
@@ -482,7 +500,7 @@ void setup()
         {
             if (timeinfo.tm_mday == weatherDay.date.tm_mday)
             {
-                uint8_t *icon = getWeatherIcon(weatherDay.symbol_code);
+                uint8_t *icon = getWeatherIcon32(weatherDay.symbol_code);
                 frame.drawXBitmap(4, frame.getCursorY() - 22, icon, 32, 32, INK_BLACK);
                 frame.setCursor(40, frame.getCursorY());
                 int minPrecision = weatherDay.minTemp < 10 ? 1 : 0;

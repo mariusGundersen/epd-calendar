@@ -121,6 +121,7 @@ WeatherRange getWeather(std::vector<Day> &days, std::vector<Hour> &hours, Timezo
     filter["data"]["instant"]["details"]["air_temperature"] = true;
     filter["data"]["next_12_hours"]["summary"]["symbol_code"] = true;
     filter["data"]["next_6_hours"]["summary"]["symbol_code"] = true;
+    filter["data"]["next_1_hours"]["summary"]["symbol_code"] = true;
     filter["data"]["next_1_hours"]["details"]["precipitation_amount"] = true;
     filter["data"]["next_6_hours"]["details"]["precipitation_amount"] = true;
 
@@ -169,9 +170,9 @@ WeatherRange getWeather(std::vector<Day> &days, std::vector<Hour> &hours, Timezo
         float temp = data["instant"]["details"]["air_temperature"].as<float>();
         int hourOffset = (t - firstHour) / 3600;
 
-        log_d("%s: time: %d", time.c_str(), timeinfo.tm_hour);
+        log_d("%s: time: %s", time.c_str(), symbol.c_str());
 
-        if (hourOffset < 24 * 4)
+        if (hourOffset <= 24 * 4)
         {
             if (temp < minTemp)
             {
@@ -239,7 +240,7 @@ WeatherRange getWeather(std::vector<Day> &days, std::vector<Hour> &hours, Timezo
     return WeatherRange{minTemp, maxTemp, maxPrecipitation};
 }
 
-static uint8_t cloud_bits[] PROGMEM = {
+static uint8_t cloud_bits_32[] PROGMEM = {
     0x00,
     0x00,
     0x00,
@@ -369,7 +370,7 @@ static uint8_t cloud_bits[] PROGMEM = {
     0x00,
     0x00,
 };
-static uint8_t cloud_moon_bits[] PROGMEM = {
+static uint8_t cloud_moon_bits_32[] PROGMEM = {
     0x00,
     0x00,
     0xF0,
@@ -499,7 +500,7 @@ static uint8_t cloud_moon_bits[] PROGMEM = {
     0x00,
     0x00,
 };
-static uint8_t cloud_sun_bits[] PROGMEM = {
+static uint8_t cloud_sun_bits_32[] PROGMEM = {
     0x00,
     0x00,
     0xC0,
@@ -629,7 +630,7 @@ static uint8_t cloud_sun_bits[] PROGMEM = {
     0x00,
     0x00,
 };
-static uint8_t cloud_wind_bits[] PROGMEM = {
+static uint8_t cloud_wind_bits_32[] PROGMEM = {
     0x00,
     0x00,
     0x00,
@@ -759,7 +760,7 @@ static uint8_t cloud_wind_bits[] PROGMEM = {
     0x00,
     0x00,
 };
-static uint8_t cloud_wind_moon_bits[] PROGMEM = {
+static uint8_t cloud_wind_moon_bits_32[] PROGMEM = {
     0x00,
     0x00,
     0xF0,
@@ -889,7 +890,7 @@ static uint8_t cloud_wind_moon_bits[] PROGMEM = {
     0x00,
     0x00,
 };
-static uint8_t cloud_wind_sun_bits[] PROGMEM = {
+static uint8_t cloud_wind_sun_bits_32[] PROGMEM = {
     0x00,
     0x00,
     0xC0,
@@ -1019,7 +1020,7 @@ static uint8_t cloud_wind_sun_bits[] PROGMEM = {
     0x00,
     0x00,
 };
-static uint8_t clouds_bits[] PROGMEM = {
+static uint8_t clouds_bits_32[] PROGMEM = {
     0x00,
     0x00,
     0x00,
@@ -1149,7 +1150,7 @@ static uint8_t clouds_bits[] PROGMEM = {
     0x00,
     0x00,
 };
-static uint8_t lightning_bits[] PROGMEM = {
+static uint8_t lightning_bits_32[] PROGMEM = {
     0x00,
     0x00,
     0x00,
@@ -1279,7 +1280,7 @@ static uint8_t lightning_bits[] PROGMEM = {
     0x00,
     0x00,
 };
-static uint8_t moon_bits[] PROGMEM = {
+static uint8_t moon_bits_32[] PROGMEM = {
     0x00,
     0x00,
     0x00,
@@ -1409,7 +1410,7 @@ static uint8_t moon_bits[] PROGMEM = {
     0x00,
     0x00,
 };
-static uint8_t rain0_bits[] PROGMEM = {
+static uint8_t rain0_bits_32[] PROGMEM = {
     0x00,
     0x00,
     0x00,
@@ -1539,7 +1540,7 @@ static uint8_t rain0_bits[] PROGMEM = {
     0x00,
     0x00,
 };
-static uint8_t rain0_sun_bits[] PROGMEM = {
+static uint8_t rain0_sun_bits_32[] PROGMEM = {
     0x00,
     0x00,
     0xC0,
@@ -1669,7 +1670,7 @@ static uint8_t rain0_sun_bits[] PROGMEM = {
     0x00,
     0x00,
 };
-static uint8_t rain1_bits[] PROGMEM = {
+static uint8_t rain1_bits_32[] PROGMEM = {
     0x00,
     0x00,
     0x00,
@@ -1799,7 +1800,7 @@ static uint8_t rain1_bits[] PROGMEM = {
     0x00,
     0x00,
 };
-static uint8_t rain1_moon_bits[] PROGMEM = {
+static uint8_t rain1_moon_bits_32[] PROGMEM = {
     0x00,
     0x00,
     0xF0,
@@ -1929,7 +1930,7 @@ static uint8_t rain1_moon_bits[] PROGMEM = {
     0x00,
     0x00,
 };
-static uint8_t rain1_sun_bits[] PROGMEM = {
+static uint8_t rain1_sun_bits_32[] PROGMEM = {
     0x00,
     0x00,
     0xC0,
@@ -2059,7 +2060,7 @@ static uint8_t rain1_sun_bits[] PROGMEM = {
     0x00,
     0x00,
 };
-static uint8_t rain2_bits[] PROGMEM = {
+static uint8_t rain2_bits_32[] PROGMEM = {
     0x00,
     0x00,
     0x00,
@@ -2189,7 +2190,7 @@ static uint8_t rain2_bits[] PROGMEM = {
     0x00,
     0x00,
 };
-static uint8_t rain_lightning_bits[] PROGMEM = {
+static uint8_t rain_lightning_bits_32[] PROGMEM = {
     0x00,
     0x00,
     0x00,
@@ -2319,7 +2320,7 @@ static uint8_t rain_lightning_bits[] PROGMEM = {
     0x00,
     0x00,
 };
-static uint8_t rain_snow_bits[] PROGMEM = {
+static uint8_t rain_snow_bits_32[] PROGMEM = {
     0x00,
     0x00,
     0x00,
@@ -2449,7 +2450,7 @@ static uint8_t rain_snow_bits[] PROGMEM = {
     0x00,
     0x00,
 };
-static uint8_t snow_bits[] PROGMEM = {
+static uint8_t snow_bits_32[] PROGMEM = {
     0x00,
     0x00,
     0x00,
@@ -2579,7 +2580,7 @@ static uint8_t snow_bits[] PROGMEM = {
     0x00,
     0x00,
 };
-static uint8_t snow_moon_bits[] PROGMEM = {
+static uint8_t snow_moon_bits_32[] PROGMEM = {
     0x00,
     0x00,
     0xF0,
@@ -2709,7 +2710,7 @@ static uint8_t snow_moon_bits[] PROGMEM = {
     0x00,
     0x00,
 };
-static uint8_t snow_sun_bits[] PROGMEM = {
+static uint8_t snow_sun_bits_32[] PROGMEM = {
     0x00,
     0x00,
     0xC0,
@@ -2839,7 +2840,7 @@ static uint8_t snow_sun_bits[] PROGMEM = {
     0x00,
     0x00,
 };
-static uint8_t sun_bits[] PROGMEM = {
+static uint8_t sun_bits_32[] PROGMEM = {
     0x00,
     0x00,
     0x00,
@@ -2969,7 +2970,7 @@ static uint8_t sun_bits[] PROGMEM = {
     0x00,
     0x00,
 };
-static uint8_t wind_bits[] PROGMEM = {
+static uint8_t wind_bits_32[] PROGMEM = {
     0x00,
     0x00,
     0x00,
@@ -3100,172 +3101,869 @@ static uint8_t wind_bits[] PROGMEM = {
     0x00,
 };
 
-uint8_t *getWeatherIcon(const String &symbol_code)
+static uint8_t sun_bits_16[] PROGMEM = {
+    0x00,
+    0x00,
+    0x00,
+    0x01,
+    0x00,
+    0x01,
+    0x08,
+    0x21,
+    0x10,
+    0x10,
+    0x80,
+    0x03,
+    0x40,
+    0x04,
+    0x20,
+    0x08,
+    0x2E,
+    0xE8,
+    0x20,
+    0x08,
+    0x40,
+    0x04,
+    0x80,
+    0x03,
+    0x10,
+    0x10,
+    0x08,
+    0x21,
+    0x00,
+    0x01,
+    0x00,
+    0x01,
+};
+static uint8_t moon_bits_16[] PROGMEM = {
+    0x00,
+    0x00,
+    0xE0,
+    0x00,
+    0x90,
+    0x00,
+    0x48,
+    0x00,
+    0x24,
+    0x00,
+    0x22,
+    0x00,
+    0x22,
+    0x00,
+    0x22,
+    0x00,
+    0x22,
+    0x60,
+    0x42,
+    0x50,
+    0x82,
+    0x4F,
+    0x04,
+    0x20,
+    0x08,
+    0x10,
+    0x10,
+    0x08,
+    0xE0,
+    0x07,
+    0x00,
+    0x00,
+};
+static uint8_t cloud_sun_bits_16[] PROGMEM = {
+    0x00,
+    0x00,
+    0x00,
+    0x08,
+    0x00,
+    0x5D,
+    0x00,
+    0x22,
+    0xC0,
+    0x43,
+    0x20,
+    0xC4,
+    0x20,
+    0x48,
+    0x18,
+    0x30,
+    0x04,
+    0x20,
+    0x02,
+    0x20,
+    0x02,
+    0x20,
+    0x04,
+    0x10,
+    0xF8,
+    0x0F,
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+};
+static uint8_t cloud_moon_bits_16[] PROGMEM = {
+    0x00,
+    0x00,
+    0x00,
+    0x38,
+    0x00,
+    0x24,
+    0x00,
+    0x12,
+    0xC0,
+    0x13,
+    0x20,
+    0xE4,
+    0x20,
+    0x88,
+    0x18,
+    0x50,
+    0x04,
+    0x20,
+    0x02,
+    0x20,
+    0x02,
+    0x20,
+    0x04,
+    0x10,
+    0xF8,
+    0x0F,
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+};
+static uint8_t cloud_bits_16[] PROGMEM = {
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    0xC0,
+    0x03,
+    0x20,
+    0x04,
+    0x20,
+    0x08,
+    0x18,
+    0x10,
+    0x04,
+    0x20,
+    0x02,
+    0x20,
+    0x02,
+    0x20,
+    0x04,
+    0x10,
+    0xF8,
+    0x0F,
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+};
+static uint8_t rain1_sun_bits_16[] PROGMEM = {
+    0x00,
+    0x00,
+    0x00,
+    0x08,
+    0x00,
+    0x5D,
+    0x00,
+    0x22,
+    0xC0,
+    0x43,
+    0x20,
+    0xC4,
+    0x20,
+    0x48,
+    0x18,
+    0x30,
+    0x04,
+    0x20,
+    0x02,
+    0x20,
+    0x42,
+    0x21,
+    0x44,
+    0x11,
+    0x28,
+    0x0D,
+    0xA0,
+    0x00,
+    0x80,
+    0x00,
+    0x00,
+    0x00,
+};
+static uint8_t rain1_moon_bits_16[] PROGMEM = {
+    0x00,
+    0x00,
+    0x00,
+    0x38,
+    0x00,
+    0x24,
+    0x00,
+    0x12,
+    0xC0,
+    0x13,
+    0x20,
+    0xE4,
+    0x20,
+    0x88,
+    0x18,
+    0x50,
+    0x04,
+    0x20,
+    0x02,
+    0x20,
+    0x42,
+    0x21,
+    0x44,
+    0x11,
+    0x28,
+    0x0D,
+    0xA0,
+    0x00,
+    0x80,
+    0x00,
+    0x00,
+    0x00,
+};
+static uint8_t snow_bits_16[] PROGMEM = {
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    0xC0,
+    0x03,
+    0x20,
+    0x04,
+    0x20,
+    0x08,
+    0x18,
+    0x10,
+    0x04,
+    0x20,
+    0x02,
+    0x20,
+    0x82,
+    0x20,
+    0x44,
+    0x11,
+    0x90,
+    0x04,
+    0x28,
+    0x0A,
+    0x10,
+    0x04,
+    0x00,
+    0x00,
+};
+static uint8_t rain_snow_bits_16[] PROGMEM = {
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    0xC0,
+    0x03,
+    0x20,
+    0x04,
+    0x20,
+    0x08,
+    0x18,
+    0x10,
+    0x04,
+    0x20,
+    0x02,
+    0x20,
+    0xA2,
+    0x24,
+    0x94,
+    0x0A,
+    0x50,
+    0x04,
+    0x50,
+    0x02,
+    0x40,
+    0x05,
+    0x00,
+    0x02,
+};
+static uint8_t rain_lightning_bits_16[] PROGMEM = {
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    0xC0,
+    0x03,
+    0x20,
+    0x04,
+    0x20,
+    0x08,
+    0x18,
+    0x10,
+    0x04,
+    0x20,
+    0x02,
+    0x20,
+    0xA2,
+    0x2E,
+    0x94,
+    0x06,
+    0x50,
+    0x06,
+    0x50,
+    0x04,
+    0x40,
+    0x02,
+    0x00,
+    0x02,
+};
+static uint8_t snow_sun_bits_16[] PROGMEM = {
+    0x00,
+    0x00,
+    0x00,
+    0x08,
+    0x00,
+    0x5D,
+    0x00,
+    0x22,
+    0xC0,
+    0x43,
+    0x20,
+    0xC4,
+    0x20,
+    0x48,
+    0x18,
+    0x30,
+    0x04,
+    0x20,
+    0x02,
+    0x20,
+    0x82,
+    0x20,
+    0x44,
+    0x11,
+    0x90,
+    0x04,
+    0x28,
+    0x0A,
+    0x10,
+    0x04,
+    0x00,
+    0x00,
+};
+static uint8_t rain0_bits_16[] PROGMEM = {
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    0xC0,
+    0x03,
+    0x20,
+    0x04,
+    0x20,
+    0x08,
+    0x18,
+    0x10,
+    0x04,
+    0x20,
+    0x02,
+    0x20,
+    0x42,
+    0x21,
+    0x44,
+    0x11,
+    0x08,
+    0x0C,
+    0xA0,
+    0x00,
+    0x80,
+    0x00,
+    0x00,
+    0x00,
+};
+static uint8_t rain1_bits_16[] PROGMEM = {
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    0xC0,
+    0x03,
+    0x20,
+    0x04,
+    0x20,
+    0x08,
+    0x18,
+    0x10,
+    0x04,
+    0x20,
+    0x02,
+    0x20,
+    0x42,
+    0x21,
+    0x44,
+    0x11,
+    0x28,
+    0x0D,
+    0xA0,
+    0x00,
+    0x80,
+    0x00,
+    0x00,
+    0x00,
+};
+static uint8_t rain0_sun_bits_16[] PROGMEM = {
+    0x00,
+    0x00,
+    0x00,
+    0x08,
+    0x00,
+    0x5D,
+    0x00,
+    0x22,
+    0xC0,
+    0x43,
+    0x20,
+    0xC4,
+    0x20,
+    0x48,
+    0x18,
+    0x30,
+    0x04,
+    0x20,
+    0x02,
+    0x20,
+    0x42,
+    0x21,
+    0x44,
+    0x11,
+    0x08,
+    0x0C,
+    0xA0,
+    0x00,
+    0x80,
+    0x00,
+    0x00,
+    0x00,
+};
+static uint8_t cloud_wind_bits_16[] PROGMEM = {
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    0xC0,
+    0x03,
+    0x20,
+    0x04,
+    0x20,
+    0x08,
+    0x18,
+    0x10,
+    0x04,
+    0x20,
+    0x00,
+    0x20,
+    0xFE,
+    0x27,
+    0x00,
+    0x10,
+    0xFF,
+    0x0B,
+    0x00,
+    0x00,
+    0xFC,
+    0x0F,
+    0x00,
+    0x00,
+};
+
+uint8_t *getWeatherIcon32(const String &symbol_code)
 {
     if (symbol_code.startsWith("clearsky"))
     {
-        return sun_bits;
+        return sun_bits_32;
     }
     else if (symbol_code.startsWith("fair"))
     {
-        return rain0_sun_bits;
+        return rain0_sun_bits_32;
     }
     else if (symbol_code.startsWith("partlycloudy"))
     {
-        return cloud_sun_bits;
+        return cloud_sun_bits_32;
     }
     else if (symbol_code.startsWith("cloudy"))
     {
-        return cloud_bits;
+        return cloud_bits_32;
     }
     else if (symbol_code.startsWith("lightrainshowers"))
     {
-        return rain0_sun_bits;
+        return rain0_sun_bits_32;
     }
     else if (symbol_code.startsWith("rainshowers"))
     {
-        return rain1_sun_bits;
+        return rain1_sun_bits_32;
     }
     else if (symbol_code.startsWith("heavyrainshowers"))
     {
-        return rain1_sun_bits;
+        return rain1_sun_bits_32;
     }
     else if (symbol_code.startsWith("lightrainshowersandthunder"))
     {
-        return rain_lightning_bits;
+        return rain_lightning_bits_32;
     }
     else if (symbol_code.startsWith("rainshowersandthunder"))
     {
-        return rain_lightning_bits;
+        return rain_lightning_bits_32;
     }
     else if (symbol_code.startsWith("heavyrainshowersandthunder"))
     {
-        return rain_lightning_bits;
+        return rain_lightning_bits_32;
     }
     else if (symbol_code.startsWith("lightsleetshowers"))
     {
-        return rain_snow_bits;
+        return rain_snow_bits_32;
     }
     else if (symbol_code.startsWith("sleetshowers"))
     {
-        return rain_snow_bits;
+        return rain_snow_bits_32;
     }
     else if (symbol_code.startsWith("heavysleetshowers"))
     {
-        return rain_snow_bits;
+        return rain_snow_bits_32;
     }
     else if (symbol_code.startsWith("lightssleetshowersandthunder"))
     {
-        return rain_snow_bits;
+        return rain_snow_bits_32;
     }
     else if (symbol_code.startsWith("sleetshowersandthunder"))
     {
-        return rain_snow_bits;
+        return rain_snow_bits_32;
     }
     else if (symbol_code.startsWith("heavysleetshowersandthunder"))
     {
-        return rain_snow_bits;
+        return rain_snow_bits_32;
     }
     else if (symbol_code.startsWith("lightsnowshowers"))
     {
-        return snow_sun_bits;
+        return snow_sun_bits_32;
     }
     else if (symbol_code.startsWith("snowshowers"))
     {
-        return snow_sun_bits;
+        return snow_sun_bits_32;
     }
     else if (symbol_code.startsWith("heavysnowshowers"))
     {
-        return snow_sun_bits;
+        return snow_sun_bits_32;
     }
     else if (symbol_code.startsWith("lightssnowshowersandthunder"))
     {
-        return snow_sun_bits;
+        return snow_sun_bits_32;
     }
     else if (symbol_code.startsWith("snowshowersandthunder"))
     {
-        return snow_sun_bits;
+        return snow_sun_bits_32;
     }
     else if (symbol_code.startsWith("heavysnowshowersandthunder"))
     {
-        return snow_sun_bits;
+        return snow_sun_bits_32;
     }
     else if (symbol_code.startsWith("lightrain"))
     {
-        return rain0_bits;
+        return rain0_bits_32;
     }
     else if (symbol_code.startsWith("rain"))
     {
-        return rain0_bits;
+        return rain0_bits_32;
     }
     else if (symbol_code.startsWith("heavyrain"))
     {
-        return rain1_bits;
+        return rain1_bits_32;
     }
     else if (symbol_code.startsWith("lightrainandthunder"))
     {
-        return rain_lightning_bits;
+        return rain_lightning_bits_32;
     }
     else if (symbol_code.startsWith("rainandthunder"))
     {
-        return rain_lightning_bits;
+        return rain_lightning_bits_32;
     }
     else if (symbol_code.startsWith("heavyrainandthunder"))
     {
-        return rain_lightning_bits;
+        return rain_lightning_bits_32;
     }
     else if (symbol_code.startsWith("lightsleet"))
     {
-        return rain_snow_bits;
+        return rain_snow_bits_32;
     }
     else if (symbol_code.startsWith("sleet"))
     {
-        return rain_snow_bits;
+        return rain_snow_bits_32;
     }
     else if (symbol_code.startsWith("heavysleet"))
     {
-        return rain_snow_bits;
+        return rain_snow_bits_32;
     }
     else if (symbol_code.startsWith("lightsleetandthunder"))
     {
-        return rain_snow_bits;
+        return rain_snow_bits_32;
     }
     else if (symbol_code.startsWith("sleetandthunder"))
     {
-        return rain_snow_bits;
+        return rain_snow_bits_32;
     }
     else if (symbol_code.startsWith("heavysleetandthunder"))
     {
-        return rain_snow_bits;
+        return rain_snow_bits_32;
     }
     else if (symbol_code.startsWith("lightsnow"))
     {
-        return snow_bits;
+        return snow_bits_32;
     }
     else if (symbol_code.startsWith("snow"))
     {
-        return snow_bits;
+        return snow_bits_32;
     }
     else if (symbol_code.startsWith("heavysnow"))
     {
-        return snow_bits;
+        return snow_bits_32;
     }
     else if (symbol_code.startsWith("lightsnowandthunder"))
     {
-        return snow_bits;
+        return snow_bits_32;
     }
     else if (symbol_code.startsWith("snowandthunder"))
     {
-        return snow_bits;
+        return snow_bits_32;
     }
     else if (symbol_code.startsWith("heavysnowandthunder"))
     {
-        return snow_bits;
+        return snow_bits_32;
     }
     else if (symbol_code.startsWith("fog"))
     {
-        return cloud_wind_bits;
+        return cloud_wind_bits_32;
     }
 
-    return rain0_bits;
+    return rain0_bits_32;
+}
+
+uint8_t *getWeatherIcon16(const String &symbol_code)
+{
+    if (symbol_code.equals("clearsky_day"))
+    {
+        return sun_bits_16;
+    }
+    else if (symbol_code.equals("clearsky_night"))
+    {
+        return moon_bits_16;
+    }
+    else if (symbol_code.equals("fair_day"))
+    {
+        return cloud_sun_bits_16;
+    }
+    else if (symbol_code.equals("fair_night"))
+    {
+        return cloud_moon_bits_16;
+    }
+    else if (symbol_code.equals("partlycloudy_day"))
+    {
+        return cloud_sun_bits_16;
+    }
+    else if (symbol_code.equals("partlycloudy_night"))
+    {
+        return cloud_moon_bits_16;
+    }
+    else if (symbol_code.startsWith("partlycloudy"))
+    {
+        return cloud_sun_bits_16;
+    }
+    else if (symbol_code.startsWith("cloudy"))
+    {
+        return cloud_bits_16;
+    }
+    else if (symbol_code.startsWith("lightrainshowers"))
+    {
+        return rain0_sun_bits_16;
+    }
+    else if (symbol_code.startsWith("rainshowers"))
+    {
+        return rain1_sun_bits_16;
+    }
+    else if (symbol_code.startsWith("heavyrainshowers"))
+    {
+        return rain1_sun_bits_16;
+    }
+    else if (symbol_code.startsWith("lightrainshowersandthunder"))
+    {
+        return rain_lightning_bits_16;
+    }
+    else if (symbol_code.startsWith("rainshowersandthunder"))
+    {
+        return rain_lightning_bits_16;
+    }
+    else if (symbol_code.startsWith("heavyrainshowersandthunder"))
+    {
+        return rain_lightning_bits_16;
+    }
+    else if (symbol_code.startsWith("lightsleetshowers"))
+    {
+        return rain_snow_bits_16;
+    }
+    else if (symbol_code.startsWith("sleetshowers"))
+    {
+        return rain_snow_bits_16;
+    }
+    else if (symbol_code.startsWith("heavysleetshowers"))
+    {
+        return rain_snow_bits_16;
+    }
+    else if (symbol_code.startsWith("lightssleetshowersandthunder"))
+    {
+        return rain_snow_bits_16;
+    }
+    else if (symbol_code.startsWith("sleetshowersandthunder"))
+    {
+        return rain_snow_bits_16;
+    }
+    else if (symbol_code.startsWith("heavysleetshowersandthunder"))
+    {
+        return rain_snow_bits_16;
+    }
+    else if (symbol_code.startsWith("lightsnowshowers"))
+    {
+        return snow_sun_bits_16;
+    }
+    else if (symbol_code.startsWith("snowshowers"))
+    {
+        return snow_sun_bits_16;
+    }
+    else if (symbol_code.startsWith("heavysnowshowers"))
+    {
+        return snow_sun_bits_16;
+    }
+    else if (symbol_code.startsWith("lightssnowshowersandthunder"))
+    {
+        return snow_sun_bits_16;
+    }
+    else if (symbol_code.startsWith("snowshowersandthunder"))
+    {
+        return snow_sun_bits_16;
+    }
+    else if (symbol_code.startsWith("heavysnowshowersandthunder"))
+    {
+        return snow_sun_bits_16;
+    }
+    else if (symbol_code.startsWith("lightrain"))
+    {
+        return rain0_bits_16;
+    }
+    else if (symbol_code.startsWith("rain"))
+    {
+        return rain0_bits_16;
+    }
+    else if (symbol_code.startsWith("heavyrain"))
+    {
+        return rain1_bits_16;
+    }
+    else if (symbol_code.startsWith("lightrainandthunder"))
+    {
+        return rain_lightning_bits_16;
+    }
+    else if (symbol_code.startsWith("rainandthunder"))
+    {
+        return rain_lightning_bits_16;
+    }
+    else if (symbol_code.startsWith("heavyrainandthunder"))
+    {
+        return rain_lightning_bits_16;
+    }
+    else if (symbol_code.startsWith("lightsleet"))
+    {
+        return rain_snow_bits_16;
+    }
+    else if (symbol_code.startsWith("sleet"))
+    {
+        return rain_snow_bits_16;
+    }
+    else if (symbol_code.startsWith("heavysleet"))
+    {
+        return rain_snow_bits_16;
+    }
+    else if (symbol_code.startsWith("lightsleetandthunder"))
+    {
+        return rain_snow_bits_16;
+    }
+    else if (symbol_code.startsWith("sleetandthunder"))
+    {
+        return rain_snow_bits_16;
+    }
+    else if (symbol_code.startsWith("heavysleetandthunder"))
+    {
+        return rain_snow_bits_16;
+    }
+    else if (symbol_code.startsWith("lightsnow"))
+    {
+        return snow_bits_16;
+    }
+    else if (symbol_code.startsWith("snow"))
+    {
+        return snow_bits_16;
+    }
+    else if (symbol_code.startsWith("heavysnow"))
+    {
+        return snow_bits_16;
+    }
+    else if (symbol_code.startsWith("lightsnowandthunder"))
+    {
+        return snow_bits_16;
+    }
+    else if (symbol_code.startsWith("snowandthunder"))
+    {
+        return snow_bits_16;
+    }
+    else if (symbol_code.startsWith("heavysnowandthunder"))
+    {
+        return snow_bits_16;
+    }
+    else if (symbol_code.startsWith("fog"))
+    {
+        return cloud_wind_bits_16;
+    }
+
+    return rain0_bits_16;
 }
