@@ -410,6 +410,7 @@ void drawMeteogram(TFT_eSprite frame, WeatherRange weatherRange, std::vector<Hou
     {
         Hour hour = weatherHours.at(h);
         int hourX = (hour.hourOffset) * hourWidth;
+        int tempY = hour.temperature * tempMultiplier;
 
         if (h < weatherHours.size() - 1)
         {
@@ -421,16 +422,16 @@ void drawMeteogram(TFT_eSprite frame, WeatherRange weatherRange, std::vector<Hou
                 frame.fillRect(hourX, zeroY - height + 1, width, height, INK_LIGHT_GREY);
                 frame.drawRect(hourX, zeroY - height + 1, width, height, INK_BLACK);
             }
+
+            if (hour.hourOffset % 2 == 1)
+            {
+                int tempNextY = nextHour.temperature * tempMultiplier;
+                frame.drawXBitmap(hourX + (width == 10 ? 2 : -8 + width / 2), zeroY - (tempY + tempNextY) / 2 - 20, getWeatherIcon16(hour.symbol), 16, 16, INK_BLACK);
+            }
         }
 
-        int tempY = hour.temperature * tempMultiplier;
         frame.drawLine(previousHour * hourWidth, zeroY - previousTemp, hourX, zeroY - tempY, INK_RED);
         frame.drawLine(previousHour * hourWidth, zeroY - previousTemp - 1, hourX, zeroY - tempY - 1, INK_RED);
-
-        if (hour.hourOffset % 2 == 1)
-        {
-            frame.drawXBitmap(hourX - 8, zeroY - tempY - 20, getWeatherIcon16(hour.symbol), 16, 16, INK_BLACK);
-        }
 
         previousTemp = tempY;
 
